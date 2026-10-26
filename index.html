@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="sv">
+<head>
+ <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+ <meta name="theme-color" content="#101714"><meta name="description" content="Din personliga levelingkompis i WoW Forever. Quests, talents, zoner och dungeons, ett steg i taget.">
+ <meta name="robots" content="noindex, nofollow">
+ <title>Färdväg — din levelingkompis i Forever</title>
+ <link rel="icon" href="./assets/compass.svg" type="image/svg+xml"><link rel="manifest" href="./manifest.webmanifest"><link rel="stylesheet" href="./styles.css">
+ <script defer src="./catalog.js"></script><script defer src="./content.js"></script><script defer src="./core.js"></script><script defer src="./app.js"></script>
+</head>
+<body>
+ <a class="skip-link" href="#main">Hoppa till innehåll</a>
+ <aside class="sidebar" id="sidebar" aria-label="Huvudnavigation">
+  <a class="brand" href="#overview" aria-label="Färdväg, översikt"><img src="./assets/compass.svg" alt="" width="38" height="38"><span>FÄRDVÄG<small>WORLD OF WARCRAFT · FOREVER</small></span></a>
+  <div class="sidebar-character" id="sidebar-character"></div>
+  <div class="nav-caption">DIN ÄVENTYRSJOURNAL</div><nav id="navigation"></nav>
+  <button class="new-character side-button" data-action="new-character"><span data-icon="plus"></span> Ny karaktär</button>
+  <div class="sidebar-bottom"><div class="camp-mark" data-icon="tent"></div><p>Äventyret är ditt.<br><strong>Vi håller koll på nästa steg.</strong></p><button class="side-button" data-action="settings"><span data-icon="settings"></span> Inställningar & backup</button><button class="version-link" data-action="about">Utkast 0.1 · 26 oktober 2026</button></div>
+ </aside>
+ <div class="workspace">
+  <header class="topbar">
+   <button class="icon-button mobile-menu" data-action="menu" aria-label="Öppna menyn"><span data-icon="menu"></span></button>
+   <div class="breadcrumb"><span>Din resa</span><span class="breadcrumb-divider">/</span><span id="breadcrumb-character">Loreia</span></div>
+   <div class="topbar-actions"><span class="saved-state" id="save-status" role="status"><i></i> Sparat på enheten</span><button class="toolbar-button" id="beginner-toggle" data-action="beginner" aria-label="Slå på eller av nybörjarläge" aria-pressed="true"><span data-icon="sprout"></span><span>Nybörjarläge</span></button><button class="toolbar-button" id="compact-toggle" data-action="compact" aria-pressed="false"><span data-icon="gamepad"></span><span>Spelläge</span></button></div>
+  </header>
+  <main id="main" tabindex="-1">
+   <div id="page-heading"></div>
+   <div class="search-row"><div class="search-wrap"><span data-icon="search"></span><input id="search" type="search" autocomplete="off" placeholder="Sök efter en quest, dungeon, ability…" aria-label="Sök i guiden"><kbd>/</kbd></div><button class="filter-button" data-action="filters" aria-label="Välj synliga kategorier"><span data-icon="sliders"></span><span>Kategorier</span><span class="filter-count" id="filter-count">7</span></button></div>
+   <div id="search-options" class="search-options" hidden><span>Söker även i dolda kategorier och alla levels.</span><label><input id="search-everyone" type="checkbox"> Alla klasser och factions</label></div>
+   <div id="content"></div>
+   <footer class="main-footer"><span>Färdväg · En liten hjälp på ett stort äventyr.</span><button data-action="about"><span data-icon="book"></span> Källor & innehållsstatus</button><span id="offline-status"><span data-icon="wifi"></span> Förbereder offlineläge</span></footer>
+  </main>
+ </div>
+ <div class="drawer-backdrop" id="menu-backdrop" hidden></div>
+ <dialog id="dialog"><div id="dialog-content"></div></dialog>
+ <div id="toast" class="toast" role="status" aria-live="polite"></div>
+ <input type="file" id="backup-file" accept="application/json,.json" hidden>
+ <noscript><p class="noscript">Guidens karaktärer och checklistor behöver JavaScript. Aktivera JavaScript i webbläsaren och ladda om sidan.</p></noscript>
+</body>
+</html>
