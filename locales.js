@@ -1,5 +1,6 @@
 'use strict';
 window.GuideI18n.configure({
+  "Tillbaka":"Back",
   "Din klasstrainer": "Your class trainer",
   "Se klassguiden för din ras och questvariant.": "See the class guide for your race and quest variant.",
   "Din första totemquest. Gör varianten för din ras så du kan använda Earth Totems.": "Your first totem quest. Follow your race's version to unlock Earth Totems.",
@@ -404,7 +405,7 @@ window.GuideI18n.configure({
   "Förbereder offlineläge": "Preparing offline mode",
   "Ny version finns ·": "New version available ·",
   "Sparningen behöver kontrolleras. Öppna Inställningar & backup.": "Saving needs attention. Open Settings & backup.",
-  "Filen är inte en giltig backup från Färdväg.": "This file is not a valid Färdväg backup.",
+  "Filen är inte en giltig backup från Questbound.": "This file is not a valid Questbound backup.",
   "En karaktär har en okänd klass.": "A character has an unknown class.",
   "Buildens klass matchar inte karaktären.": "The build's class does not match the character.",
   "Builden innehåller en okänd talang.": "The build contains an unknown talent.",
@@ -493,7 +494,7 @@ window.GuideI18n.configure({
   "talangträd": "talent tree",
   "Hoppa till innehåll": "Skip to content",
   "Huvudnavigation": "Main navigation",
-  "Färdväg, översikt": "Färdväg, overview",
+  "Questbound, översikt": "Questbound, overview",
   "DIN ÄVENTYRSJOURNAL": "YOUR ADVENTURE JOURNAL",
   "Äventyret är ditt.": "The adventure is yours.",
   "Vi håller koll på nästa steg.": "We keep track of the next step.",
@@ -510,7 +511,7 @@ window.GuideI18n.configure({
   "Kategorier": "Categories",
   "Söker även i dolda kategorier och alla levels.": "Also searches hidden categories and all levels.",
   "Alla klasser och factions": "All classes and factions",
-  "Färdväg · En liten hjälp på ett stort äventyr.": "Färdväg · A little help on a great adventure.",
+  "Questbound · En liten hjälp på ett stort äventyr.": "Questbound · A little help on a great adventure.",
   "Källor & innehållsstatus": "Sources & content status",
   "Att starta en strid med en fiende eller grupp. I en dungeon brukar tanken styra detta.": "Starting combat with an enemy or group. In a dungeon, the tank usually controls this.",
   "En figur som styrs av spelet, exempelvis en questgivare, trainer eller handlare.": "A character controlled by the game, such as a quest giver, trainer or merchant.",

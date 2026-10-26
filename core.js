@@ -40,12 +40,23 @@
       compact: false
     };
   }
+  function createBlankCharacter() {
+    return {
+      ...createCharacter(),
+      name: '',
+      classId: '',
+      race: '',
+      faction: '',
+      role: '',
+      blank: true
+    };
+  }
   function normalise(raw, catalog) {
-    if (!raw || typeof raw !== 'object' || Array.isArray(raw) || raw.schema !== 1 || !Array.isArray(raw.characters) || !raw.characters.length || raw.characters.length > 100) throw Error('Filen är inte en giltig backup från Färdväg.');
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw) || raw.schema !== 1 || !Array.isArray(raw.characters) || !raw.characters.length || raw.characters.length > 100) throw Error('Filen är inte en giltig backup från Questbound.');
     const ids = new Set();
     const characters = raw.characters.map(c => {
-      if (!c || typeof c !== 'object' || !catalog.classes[c.classId]) throw Error('En karaktär har en okänd klass.');
-      const out = createCharacter(c);
+      if (!c || typeof c !== 'object' || !catalog.classes[c.classId] && !(c.blank === true && c.classId === '')) throw Error('En karaktär har en okänd klass.');
+      const out = c.blank === true && !c.classId ? createBlankCharacter() : createCharacter(c);
       out.id = typeof c.id === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(c.id) && !ids.has(c.id) ? c.id : uuid();
       ids.add(out.id);
       out.done = Object.fromEntries(Object.entries(c.done || {}).filter(([k, v]) => /^[a-zA-Z0-9_:.-]{1,180}$/.test(k) && v === true));
@@ -223,6 +234,9 @@
         max: t.max,
         spell: t.spell,
         minLevel: t.minLevel,
+        row: t.row,
+        col: t.col,
+        id: t.id,
         treeName: catalog.classes[build.classId].trees[s.tree].name
       };
     });
@@ -250,6 +264,7 @@
     clamp,
     clean,
     createCharacter,
+    createBlankCharacter,
     normalise,
     normaliseBuild,
     parseWowhead,

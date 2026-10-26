@@ -67,3 +67,10 @@ Instruktionerna är egna sammanfattningar av funktioner och knappmappning; klien
 ## Zon- och subzonsökning, version 0.2.0
 
 Zonkatalogen har utökats från samma Forever-zondatabas. Nya zoner har preliminär status; exakta rutter har inte konstruerats från levelintervall. Lokala ortsnamn och dungeonkopplingar är en explicit uppslagstabell. Platser som Crossroads och Ratchet kopplas till The Barrens. Valet är manuellt, inte automatisk positionsavläsning från spelet. Förberedelserna är redaktionella råd. The Barrens hänvisar till Wailing Caverns-förquestsen som redan dokumenterats i dungeonurvalet.
+
+## Questbound 0.3 — character options and game icons
+
+- Blizzard: https://worldofwarcraft.blizzard.com/en-us/news/24304075/ — original class combinations and six new Forever combinations (Gnome Priest, Human Hunter, Dwarf Shaman, Orc Mage, Troll Warlock, Undead Paladin).
+- Blizzard: https://worldofwarcraft.blizzard.com/en-gb/news/24302071/wow-forever-meet-the-new-skyborne — Skyborne classes: Warrior, Hunter, Rogue, Druid for both factions, Shaman for Horde, Mage for Alliance.
+- Talent rows, columns and prerequisite IDs use the same pinned Wowhead Forever v2 factual catalogue. Icon filenames were matched by talent ID against the retrieved calculator data.
+- In-game class, talent and profession icons are Blizzard artwork served by Wowhead's icon CDN, https://wow.zamimg.com/images/wow/icons/medium/. They are bundled for offline use. No guide descriptions or third-party application code are included.

@@ -10,6 +10,10 @@
     T = window.GuideTools;
   RAW.controls = window.GUIDE_CONTROLS.rows;
   T.augment(RAW, window.GUIDE_EXTRA_ZONES);
+  const R = window.CharacterRules;
+  let navTrail = [],
+    dialogTrail = [],
+    dialogTitle = '';
   let D = RAW;
   const $ = s => document.querySelector(s),
     esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({
@@ -20,6 +24,7 @@
       "'": '&#39;'
     })[c]);
   const paths = {
+    back: '<path d="M20 12H4m6-6-6 6 6 6"/>',
     compass: '<circle cx="12" cy="12" r="9"/><path d="m16 8-2 6-6 2 2-6Z"/>',
     home: '<path d="m3 10 9-7 9 7v10H3Z"/><path d="M9 20v-7h6v7"/>',
     zap: '<path d="m13 2-9 12h7l-1 8 10-12h-7Z"/>',
@@ -130,19 +135,7 @@
     };
   }
   function initialState() {
-    const c = C.createCharacter({
-      name: 'Loreia',
-      classId: 'shaman',
-      race: 'Skyborne',
-      faction: 'Horde',
-      level: 20,
-      role: 'Healer',
-      spec: 'Hybrid',
-      professions: ['Skinning', 'Leatherworking', 'Cooking', 'First Aid'],
-      demo: true
-    });
-    c.builds = [builtIn()];
-    c.activeBuild = c.builds[0].id;
+    const c = C.createBlankCharacter();
     return {
       schema: 1,
       characters: [c],
@@ -167,7 +160,7 @@
   L.setLanguage(state.settings.language);
   D = L.localize(RAW);
   const character = () => state.characters.find(c => c.id === state.activeId) || state.characters[0];
-  const klass = () => DB.classes[character().classId];
+  const klass = () => DB.classes[character().classId] || DB.classes.warrior;
   const activeBuild = () => character().builds.find(b => b.id === character().activeBuild);
   function notify(message) {
     $('#toast').textContent = message;
@@ -193,8 +186,8 @@
     root.querySelectorAll('[data-icon]').forEach(el => el.innerHTML = icon(el.dataset.icon));
   }
   function avatar(c, large = false) {
-    const cl = DB.classes[c.classId];
-    return L.h`<span class="class-avatar ${large ? 'large' : ''}" style="--class-color:${cl.color}">${icon(cl.icon)}</span>`;
+    if (!c.classId) return `<span class="class-avatar ${large ? 'large' : ''}">${icon('plus')}</span>`;
+    return `<span class="class-avatar ${large ? 'large' : ''}" style="--class-color:${DB.classes[c.classId].color}">${gameIcon(window.GAME_ASSETS.classes[c.classId])}</span>`;
   }
   function sourceLine(item) {
     const status = item.status === 'preliminary' ? L.t('Preliminärt') : item.status === 'editorial' ? L.t('Praktiskt tips') : L.t('Källuppgift');
@@ -221,16 +214,14 @@
     return C.matchesCharacter(item, c) && T.visibleAtHelp(item, c) && (!item.roles || item.roles.includes(c.role)) && c.filters.categories.includes(item.category);
   }
   function actionableItems() {
-    return [...D.quests, ...D.misc].filter(q => visible(q) && inView(q) && (character().filters.showDone || !C.questDone(q, character()))).sort((a, b) => {
-      const l = character().level;
-      return Number(b.level === l) - Number(a.level === l) || Number(!!b.classId) - Number(!!a.classId) || b.level - a.level;
-    });
+    const c = character();
+    return [...D.quests, ...D.misc].filter(q => visible(q) && inView(q) && (c.filters.showDone || !C.questDone(q, c))).sort((a, b) => c.filters.view === 'all' ? a.level - b.level || a.title.localeCompare(b.title) : Number(b.level === c.level) - Number(a.level === c.level) || Number(!!b.classId) - Number(!!a.classId) || b.level - a.level);
   }
   function questCard(q) {
     const c = character(),
       done = C.questDone(q, c),
       partial = q.steps?.filter((_, i) => c.done[q.id + ':' + i]).length || 0;
-    return L.h`<article class="quest-card ${done ? 'done' : ''}"><div class="quest-head"><input class="quest-check" type="checkbox" data-check="${esc(q.id)}" aria-label="Markera ${esc(q.title)} som klar" ${done ? 'checked' : ''}><div class="quest-copy"><div class="card-meta">${levelTag(q.level, done)}<span>${q.classId ? esc(DB.classes[q.classId].name) + ' · ' + (q.category === 'quests' ? L.t('Klassquest') : L.t(categoryNames[q.category]) || 'Guide') : q.kind || L.t(categoryNames[q.category]) || 'Quest'}</span>${partial && !done ? L.h`<span>· ${partial}/${q.steps.length} steg</span>` : ''}</div><h3>${esc(q.title)}</h3>${c.helpLevel >= 2 ? L.h`<p>${esc(q.desc || L.t('Kontrollera och lär den här förmågan när den blir tillgänglig.'))}</p>` : ''}</div><span class="quest-icon">${icon(q.classId ? 'scroll' : categoryIcons[q.category] || 'check')}</span></div><details class="quest-details" ${c.helpLevel >= 3 ? 'open' : ''}><summary>Visa ${q.steps?.length ? L.t('steg och plats') : L.t('mer information')}</summary><div class="details-inner">${q.location || q.reward ? L.h`<dl>${q.location ? L.h`<dt>Start / plats</dt><dd>${esc(q.location)} ${q.coords ? coordinate(q.coords) : ''}</dd>` : ''}${q.reward ? L.h`<dt>Belöning</dt><dd>${esc(q.reward)}</dd>` : ''}</dl>` : ''}${q.category === 'abilities' ? L.h`<p>Träningsnivå enligt Forever-kalkylatorn. Vissa förmågor kräver en klassquest eller annan upplåsning. Kontrollera även din trainer och spellbook.</p><a href="${esc(q.source)}" target="_blank" rel="noopener noreferrer">Läs förmågans beskrivning på Wowhead ${icon('external')}</a>` : ''}${q.steps?.length ? L.h`<div class="step-list">${q.steps.map((step, i) => L.h`<label class="step-row ${c.done[q.id + ':' + i] ? 'completed' : ''}"><input type="checkbox" data-step="${esc(q.id)}" data-index="${i}" ${c.done[q.id + ':' + i] ? 'checked' : ''}><span>${esc(step)}</span></label>`).join('')}</div>` : ''}${sourceLine(q)}</div></details></article>`;
+    return L.h`<article class="quest-card ${done ? 'done' : ''}"><div class="quest-head"><input class="quest-check" type="checkbox" data-check="${esc(q.id)}" aria-label="Markera ${esc(q.title)} som klar" ${done ? 'checked' : ''}><div class="quest-copy"><div class="card-meta">${levelTag(q.level, done)}<span>${q.classId ? esc(DB.classes[q.classId].name) + ' · ' + (q.category === 'quests' ? L.t('Klassquest') : L.t(categoryNames[q.category]) || 'Guide') : q.kind || L.t(categoryNames[q.category]) || 'Quest'}</span>${partial && !done ? L.h`<span>· ${partial}/${q.steps.length} steg</span>` : ''}</div><h3>${esc(q.title)}</h3>${c.helpLevel >= 2 ? L.h`<p>${esc(q.desc || L.t('Kontrollera och lär den här förmågan när den blir tillgänglig.'))}</p>` : ''}</div><span class="quest-icon">${q.classId ? gameIcon(window.GAME_ASSETS.classes[q.classId]) : icon(categoryIcons[q.category] || 'check')}</span></div><details class="quest-details" ${c.helpLevel >= 3 ? 'open' : ''}><summary>Visa ${q.steps?.length ? L.t('steg och plats') : L.t('mer information')}</summary><div class="details-inner">${q.location || q.reward ? L.h`<dl>${q.location ? L.h`<dt>Start / plats</dt><dd>${esc(q.location)} ${q.coords ? coordinate(q.coords) : ''}</dd>` : ''}${q.reward ? L.h`<dt>Belöning</dt><dd>${esc(q.reward)}</dd>` : ''}</dl>` : ''}${q.category === 'abilities' ? L.h`<p>Träningsnivå enligt Forever-kalkylatorn. Vissa förmågor kräver en klassquest eller annan upplåsning. Kontrollera även din trainer och spellbook.</p><a href="${esc(q.source)}" target="_blank" rel="noopener noreferrer">Läs förmågans beskrivning på Wowhead ${icon('external')}</a>` : ''}${q.steps?.length ? L.h`<div class="step-list">${q.steps.map((step, i) => L.h`<label class="step-row ${c.done[q.id + ':' + i] ? 'completed' : ''}"><input type="checkbox" data-step="${esc(q.id)}" data-index="${i}" ${c.done[q.id + ':' + i] ? 'checked' : ''}><span>${esc(step)}</span></label>`).join('')}</div>` : ''}${sourceLine(q)}</div></details></article>`;
   }
   function coordinate(coords) {
     return L.h`<button class="coordinate" data-copy="${esc(coords)}" aria-label="Kopiera koordinater">${esc(coords)} ${icon('copy')}</button>`;
@@ -258,16 +249,16 @@
   function heading() {
     const c = character(),
       n = nav.find(n => n[0] === page) || nav[0];
-    $('#page-heading').innerHTML = L.h`<div class="heading-top"><span class="tiny-line"></span> ${esc(c.faction.toUpperCase())} · ${esc(DB.classes[c.classId].name.toUpperCase())} · ${esc(c.race.toUpperCase())}</div><div class="heading-row"><div><h1>${page === 'overview' ? bi('The adventure continues.', 'Äventyret fortsätter.') : esc(L.t(n[1]))}</h1><p class="page-subtitle">${page === 'overview' ? bi('Your journey through Azeroth. One quest, one level at a time.', 'Din väg genom Azeroth. En quest och en level i taget.') : page === 'controller' ? bi('Find the gamepad action you need and how to reach it.', 'Hitta funktionen du behöver och hur du når den med handkontroll.') : bi('Guidance for your character, your level and your journey.', 'Hjälp för din karaktär, din level och din resa.')}</p></div><button class="draft-badge" data-action="about">${bi('VERSION', 'VERSION')} 0.2</button></div>`;
+    $('#page-heading').innerHTML = `<div class="heading-row"><h1>${c.blank ? bi('Create your character', 'Skapa din karaktär') : esc(L.t(n[1]))}</h1><button class="draft-badge" data-action="about">0.3.0</button></div>`;
   }
   function renderShell() {
     applyPreferences();
     const c = character();
     document.body.classList.toggle('compact', c.compact);
-    $('#sidebar-character').innerHTML = L.h`<button class="character-switch" data-action="characters" aria-label="${bi('Switch or manage character', 'Byt eller hantera karaktär')}">${avatar(c)}<span class="character-copy"><strong>${esc(c.name)}</strong><small>Level ${c.level} · ${esc(DB.classes[c.classId].name)}</small></span>${icon('chevron')}</button>`;
+    $('#sidebar-character').innerHTML = L.h`<button class="character-switch" data-action="characters" aria-label="${bi('Switch or manage character', 'Byt eller hantera karaktär')}">${avatar(c)}<span class="character-copy"><strong>${esc(c.name || bi('New character', 'Ny karaktär'))}</strong><small>${c.blank ? '—' : 'Level ' + c.level + ' · ' + esc(klass().name)}</small></span>${icon('chevron')}</button>`;
     $('#breadcrumb-character').textContent = c.name;
     $('#navigation').innerHTML = nav.map(([id, name, ic], i) => L.h`${i === 9 ? '<div class="nav-separator"></div>' : ''}<button data-page="${id}" class="${page === id ? 'active' : ''}" ${page === id ? 'aria-current="page"' : ''}>${icon(ic)}${esc(L.t(name))}</button>`).join('');
-    $('#beginner-toggle').setAttribute('aria-pressed', c.beginner);
+    $('#back-button').disabled = !navTrail.length;
     $('#compact-toggle').setAttribute('aria-pressed', c.compact);
     $('#filter-count').textContent = c.filters.categories.length;
     heading();
@@ -276,47 +267,40 @@
   }
   function hero() {
     const c = character();
-    return L.h`<section class="hero" aria-label="Din karaktär och level"><div class="hero-left"><div class="eyebrow">${c.demo ? L.t('EXEMPELPROFIL · ANPASSA NÄR DU VILL') : L.t('DITT ÄVENTYR I FOREVER')}</div><h2>Hej, ${esc(c.name)}.</h2><p class="hero-description">${c.beginner ? L.t('Följ dina nästa steg här nedanför. Bocka av när du är klar — guiden kommer ihåg åt dig.') : L.t('Håll kursen, samla dina quests och gör plats för nästa level.')}</p><div class="hero-profile"><span class="faction-dot"></span>${esc(c.faction)}<span>·</span>${esc(c.race)}<span>·</span>${esc(c.spec || DB.classes[c.classId].name)}<button class="text-button" data-action="edit-character">${icon('edit')} Anpassa</button></div></div><div class="hero-right"><label class="level-label" for="character-level">Nuvarande level</label><div class="level-controls"><button class="level-button" data-action="level-down" aria-label="Minska level" ${c.level === 1 ? 'disabled' : ''}>${icon('minus')}</button><div class="level-number"><input id="character-level" class="level-input" type="number" min="1" max="60" inputmode="numeric" value="${c.level}" aria-label="Din nuvarande level"><span>/ 60</span></div><button class="level-button" data-action="level-up" aria-label="Öka level" ${c.level === 60 ? 'disabled' : ''}>${icon('plus')}</button></div><div class="level-progress" role="progressbar" aria-label="Levelresa" aria-valuemin="1" aria-valuemax="60" aria-valuenow="${c.level}"><span style="width:${c.level / 60 * 100}%"></span></div><span class="level-hint">${icon('check')} Level och avbockningar sparas automatiskt</span></div><svg class="hero-decoration" viewBox="0 0 440 240" aria-hidden="true"><path class="light" d="M0 240 95 87l37 43 55-87 65 104 61-59 127 152Z"/><path d="M0 240 112 149l55 41 80-73 76 58 48-27 69 92Z"/><path d="m313 30 22 54h-13l23 50h-17l27 57h-84l26-57h-17l23-50h-12Zm75 65 16 40h-10l17 37h-12l20 42h-61l19-42h-13l17-37h-9Z"/></svg></section>`;
+    return `<section class="character-bar" aria-label="${bi('Character and level', 'Karaktär och level')}"><div class="character-bar-name">${avatar(c, true)}<div><strong>${esc(c.name)}</strong><small>${esc(klass().name)} · ${esc(c.race)} · ${esc(c.faction)}</small></div><button class="text-button" data-action="edit-character">${icon('edit')} ${bi('Edit', 'Redigera')}</button></div><div class="level-controls"><button class="level-button" data-action="level-down" aria-label="${bi('Decrease level', 'Minska level')}" ${c.level === 1 ? 'disabled' : ''}>${icon('minus')}</button><label class="current-level-label"><span>${bi('Level', 'Level')}</span><input id="character-level" type="number" min="1" max="60" inputmode="numeric" value="${c.level}" aria-label="${bi('Your current level', 'Din nuvarande level')}"></label><button class="level-button" data-action="level-up" aria-label="${bi('Increase level', 'Öka level')}" ${c.level === 60 ? 'disabled' : ''}>${icon('plus')}</button></div></section>`;
   }
   function summary() {
     const c = character(),
       b = activeBuild(),
-      next = b ? C.buildSteps(b, DB).find(s => s.level > c.level) : null,
+      steps = b ? C.buildSteps(b, DB) : [],
+      now = steps.find(s => s.level === c.level),
+      next = steps.find(s => s.level > c.level),
       q = D.quests.filter(q => q.classId && C.matchesCharacter(q, c) && !C.questDone(q, c) && q.level <= c.level + 10).sort((a, b) => Math.abs(a.level - c.level) - Math.abs(b.level - c.level))[0],
       ds = availableDungeons();
-    return L.h`<div class="summary-grid"><button class="summary-card" data-page="talents"><span class="summary-title">${icon('zap')} Nästa talentpoäng</span><strong>${next ? esc(next.name) : b ? L.t('Planen är genomförd') : L.t('Välj din första build')}</strong><small>${next ? 'Level ' + next.level + ' · ' + next.rank + '/' + next.max : L.t('Öppna talents & builds')}</small></button><button class="summary-card" data-page="quests" ${c.filters.categories.includes('quests') ? '' : 'hidden'}><span class="summary-title">${icon('scroll')} Klassquest</span><strong>${q ? esc(q.title) : L.t('Alla noterade steg klara')}</strong><small>${q ? 'Level ' + q.level + (q.level <= c.level ? L.m(' · Tillgänglig enligt källan') : L.m(' · Snart dags')) : L.t('Se hela klassens questlista')}</small></button><button class="summary-card" data-page="dungeons" ${c.filters.categories.includes('dungeons') ? '' : 'hidden'}><span class="summary-title">${icon('dungeon')} Dungeons</span><strong>${ds.length ? esc(ds[0].title) : L.t('Planera ditt första besök')}</strong><small>${ds.length ? ds.length + L.m(' i ditt aktuella intervall') : L.t('Se kommande dungeons')}</small></button></div>`;
+    return `<div class="summary-grid">${talentPointCard(bi('Talent at this level', 'Talent för denna level'), now, b)}${talentPointCard(bi('Next talent point', 'Nästa talentpoäng'), next, b)}<button class="summary-card" data-page="quests" ${c.filters.categories.includes('quests') ? '' : 'hidden'}><span class="summary-title">${icon('scroll')} ${bi('Class quest', 'Klassquest')}</span><strong>${q ? esc(q.title) : bi('All listed milestones completed', 'Alla noterade milstolpar klara')}</strong><small>${q ? 'Level ' + q.level : bi('Open class quests', 'Öppna klassquests')}</small></button><button class="summary-card" data-page="dungeons" ${c.filters.categories.includes('dungeons') ? '' : 'hidden'}><span class="summary-title">${icon('dungeon')} Dungeons</span><strong>${ds.length ? esc(ds[0].title) : bi('No dungeon in this range', 'Ingen dungeon i intervallet')}</strong><small>${bi('Open dungeon list', 'Öppna dungeonlistan')}</small></button></div>`;
   }
   function overview() {
     const c = character(),
       tasks = actionableItems(),
-      future = [...D.quests].filter(q => C.matchesCharacter(q, c) && q.level > c.level && !C.questDone(q, c)).sort((a, b) => a.level - b.level).slice(0, 3),
-      dungeons = availableDungeons().slice(0, 3),
+      all = c.filters.view === 'all' || c.filters.showDone,
+      limit = all || c.helpLevel === 4 ? Infinity : c.compact ? 5 : c.helpLevel === 1 ? 3 : c.helpLevel === 2 ? 6 : 12,
       zones = recommendedZones().slice(0, 2);
-    return sessionPanel() + hero() + summary() + L.h`<div class="dashboard-grid"><section><div class="section-top"><h2>${icon('scroll')} Att göra nu</h2><button class="text-button" data-page="quests">Alla quests ${icon('arrow')}</button></div>${tabs()}<div class="quest-list">${tasks.length ? tasks.slice(0, c.helpLevel === 4 ? undefined : c.compact ? 5 : c.helpLevel === 1 ? 3 : c.helpLevel === 2 ? 6 : 12).map(questCard).join('') : empty()}</div>${tasks.length > (c.helpLevel === 4 ? Infinity : c.compact ? 5 : c.helpLevel === 1 ? 3 : c.helpLevel === 2 ? 6 : 12) ? L.h`<button class="text-button" data-page="quests">Se fler uppgifter ${icon('arrow')}</button>` : ''}${c.filters.categories.includes('zones') ? L.h`<div class="section-top" style="margin-top:28px"><h2>${icon('map')} Här kan du fortsätta</h2><button class="text-button" data-page="zones">Alla zoner ${icon('arrow')}</button></div><div class="card-grid">${zones.length ? zones.map(z => zoneCard(z)).join('') : empty(L.t('Välj din nästa zon'), L.t('Öppna zonerna och välj Kommande eller Allt.'))}</div>` : ''}</section><aside class="side-stack">${c.filters.categories.includes('dungeons') ? L.h`<section class="mini-panel"><div class="panel-heading">${icon('dungeon')}<h3>Dags för en dungeon?</h3></div>${dungeons.length ? dungeons.map(d => L.h`<button class="mini-dungeon" data-dungeon="${d.id}" style="width:100%;text-align:left"><span class="dungeon-symbol">${icon('dungeon')}</span><div><h4>${esc(d.title)}</h4><p>Rek. ${d.level}–${d.maxLevel} · ${d.quests.filter(q => C.matchesCharacter(q, c)).length} quests i guiden</p></div><span class="mini-arrow">${icon('arrow')}</span></button>`).join('') : L.m('<p class="small">Öppna dungeonlistan för att planera ditt första besök.</p>')}<button class="text-button" data-page="dungeons">Förbered nästa besök ${icon('arrow')}</button></section>` : ''}<section class="mini-panel"><div class="panel-heading">${icon('clock')}<h3>På horisonten</h3></div>${future.length ? L.h`<ul class="timeline">${future.map(q => L.h`<li><span class="dot">${q.level}</span><strong>${esc(q.title)}</strong><small>${esc(q.reward || L.t('Nästa klassmilsten'))}</small></li>`).join('')}</ul>` : L.m('<p class="small">Nästa klassmilsten fylls på när guiden uppdateras.</p>')}</section>${c.beginner ? L.h`<section class="beginner-note"><h3>${icon('sprout')} Ny i Azeroth?</h3><p>Du bestämmer tempot. Välj quests nära din level, besök din <button class="term" data-term="Trainer">trainer</button> och fråga gruppen när något är oklart. Din <button class="term" data-term="Hearthstone">Hearthstone</button> hjälper dig hem igen.</p><button class="text-button" data-page="glossary">Öppna nybörjarguiden ${icon('arrow')}</button></section>` : ''}</aside></div>` + coverage();
+    return hero() + sessionPanel() + summary() + zoneOverview() + `<section><div class="section-top"><h2>${icon('scroll')} ${bi('To do now', 'Att göra nu')}</h2><button class="text-button" data-page="quests">${bi('All quests', 'Alla quests')} ${icon('arrow')}</button></div>${tabs()}<div class="quest-list">${tasks.length ? tasks.slice(0, limit).map(questCard).join('') : empty()}</div>${tasks.length > limit ? `<button class="text-button" data-page="quests">${bi('See more tasks', 'Se fler uppgifter')} ${icon('arrow')}</button>` : ''}</section>${!c.currentZone && c.filters.categories.includes('zones') ? `<section class="zone-section"><div class="section-top"><h2>${bi('Suggested zones', 'Föreslagna zoner')}</h2></div><div class="card-grid">${zones.map(z => zoneCard(z)).join('')}</div></section>` : ''}` + coverage();
   }
   function talents() {
     const c = character(),
       b = activeBuild();
-    let html = L.h`<div class="build-toolbar"><select id="active-build" aria-label="Aktiv build">${!c.builds.length ? L.m('<option value="">Ingen build sparad</option>') : c.builds.map(b => L.h`<option value="${esc(b.id)}" ${b.id === c.activeBuild ? 'selected' : ''}>${esc(b.name)}</option>`).join('')}</select><button class="primary-button" data-action="import-build">${icon('plus')} Importera från Wowhead</button>${c.classId === 'shaman' && !c.builds.some(b => b.id === 'wavebreaker-early-wolf-v1') ? L.m('<button class="secondary-button" data-action="add-wavebreaker">Välj Wavebreaker</button>') : ''}</div>`;
-    if (!b) return html + empty(L.t('Börja med en build'), L.t('Skapa en build i Wowheads Forever-kalkylator och klistra in delningslänken här. Guiden läser poängen och ordningen om den finns med.')) + L.h`<p style="margin-top:16px"><a href="https://www.wowhead.com/forever/talent-calc/${c.classId}" target="_blank" rel="noopener noreferrer">Öppna kalkylatorn för ${esc(klass().name)} ${icon('external')}</a></p>`;
+    let html = `<div class="build-toolbar"><select id="active-build" aria-label="${bi('Active build', 'Aktiv build')}">${!c.builds.length ? `<option value="">${bi('No saved build', 'Ingen build sparad')}</option>` : c.builds.map(b => `<option value="${esc(b.id)}" ${b.id === c.activeBuild ? 'selected' : ''}>${esc(b.name)}</option>`).join('')}</select><button class="primary-button" data-action="import-build">${icon('plus')} ${bi('Import from Wowhead', 'Importera från Wowhead')}</button>${b ? `<button class="secondary-button" data-action="edit-build">${bi('Rename build', 'Byt namn på build')}</button><button class="danger-button" data-action="request-delete-build">${bi('Delete build', 'Ta bort build')}</button>` : ''}${c.classId === 'shaman' && !c.builds.some(b => b.id === 'wavebreaker-early-wolf-v1') ? `<button class="secondary-button" data-action="add-wavebreaker">${bi('Use Wavebreaker', 'Välj Wavebreaker')}</button>` : ''}</div>`;
+    if (!b) return html + `<section class="info-card"><h2>${bi('Import your talent build', 'Importera din talentbuild')}</h2><p>${bi('Include a saved point order in the Wowhead link to see talent choices for each level.', 'Ta med en sparad poängordning i Wowhead-länken för att se talentval för varje level.')}</p><a href="https://www.wowhead.com/forever/talent-calc/${c.classId}" target="_blank" rel="noopener noreferrer">${bi('Open calculator', 'Öppna kalkylatorn')} ${icon('external')}</a></section>`;
     const steps = C.buildSteps(b, DB),
+      now = steps.find(s => s.level === c.level),
       next = steps.find(s => s.level > c.level),
-      warnings = C.validateOrder(b, DB),
-      trees = klass().trees;
-    html += L.h`<div class="info-card"><div class="section-top"><h2>${esc(b.name)}</h2><button class="text-button" data-action="edit-build">${icon('edit')} Ändra</button></div><p>${b.custom ? L.t('Din anpassade poängordning. Wavebreaker-planen flyttar Improved Ghost Wolf till level 15–16 och behåller Stormstrike till 40.') : L.t('Poängfördelningen kommer från din Wowhead-länk. Jämför alltid med den aktuella spelklienten.')}</p><div class="talent-summary">${trees.map((t, i) => L.h`<div class="tree-total"><strong>${b.allocations[i].reduce((a, b) => a + b, 0)}</strong><small>${esc(t.name)}</small></div>`).join('')}</div><div class="button-row">${b.url ? L.h`<a class="secondary-button" href="${esc(b.url)}" target="_blank" rel="noopener noreferrer">Öppna i Wowhead ${icon('external')}</a>` : ''}<button class="secondary-button" data-action="edit-order">${icon('edit')} Redigera poängordning</button></div>${sourceLine({
-      source: b.source || b.url || D.sources.wave,
-      updated: DB.updated,
-      status: 'sourced'
-    })}</div>`;
-    if (warnings.length) html += L.h`<div class="talent-warning">${icon('warning')}<span>Ordningen behöver ses över: ${esc(L.m(warnings[0].message))} ${warnings.length > 1 ? '(' + warnings.length + L.m(' anmärkningar)') : ''}</span></div>`;
-    if (next) html += L.h`<div class="talent-feature">${avatar(c, true)}<div><div class="eyebrow">NÄSTA POÄNG · LEVEL ${next.level}</div><h3>${esc(next.name)} <span class="talent-rank">${next.rank}/${next.max}</span></h3><p>${esc(next.treeName)}${next.minLevel > next.level ? L.m(' · kräver level ') + next.minLevel : ''}</p></div></div>`;
-    if (!steps.length) html += L.h`<div class="coverage-note">${icon('info')}<span>Länken innehåller slutbuilden men ingen poängordning. Lägg till en ordning för att få instruktioner vid varje level.</span></div>`;else {
-      html += L.h`<div class="section-top" style="margin-top:23px"><h2>Din levelingplan</h2><span class="small">Första poängen: level ${b.startLevel}</span></div><div class="talent-table">${steps.map(s => L.h`<div class="talent-table-row ${s.level === c.level ? 'current' : s.level > c.level ? 'future' : ''}"><span>LV ${s.level}</span><div><a href="https://www.wowhead.com/forever/spell=${s.spell}" target="_blank" rel="noopener noreferrer">${esc(s.name)}</a><span class="talent-rank">${s.rank}/${s.max}</span>${s.level < s.minLevel ? L.h`<small style="display:block;color:var(--danger)">Kräver level ${s.minLevel}</small>` : ''}</div><span class="talent-tree-label">${esc(s.treeName)}</span></div>`).join('')}</div>`;
-    }
-    html += L.h`<details class="info-card" style="margin-top:20px"><summary>Visa hela slutbuildens poängfördelning</summary><div class="talent-allocation" style="margin-top:15px">${trees.map((t, i) => L.h`<section><h3>${esc(t.name)}</h3>${t.talents.filter((_, j) => b.allocations[i][j]).map(tal => {
-      const j = t.talents.indexOf(tal);
-      return L.h`<div class="allocation-row"><span>${esc(tal.name)}</span><span>${b.allocations[i][j]}/${tal.max}</span></div>`;
-    }).join('') || L.m('<p class="small">Inga poäng.</p>')}</section>`).join('')}</div></details>`;
+      warnings = C.validateOrder(b, DB);
+    html += `<section class="info-card"><h2>${esc(b.name)}</h2><div class="talent-summary">${klass().trees.map((t, i) => `<div class="tree-total"><strong>${b.allocations[i].reduce((a, b) => a + b, 0)}</strong><small>${esc(t.name)}</small></div>`).join('')}</div>${b.url ? `<a class="secondary-button" href="${esc(b.url)}" target="_blank" rel="noopener noreferrer">${bi('Open in Wowhead', 'Öppna i Wowhead')} ${icon('external')}</a>` : ''}</section><div class="summary-grid talent-point-pair">${talentPointCard(bi('Talent at this level', 'Talent för denna level'), now, b)}${talentPointCard(bi('Next talent point', 'Nästa talentpoäng'), next, b)}</div>`;
+    if (warnings.length) html += `<p class="talent-warning">${bi('Check the imported order:', 'Kontrollera den importerade ordningen:')} ${esc(L.m(warnings[0].message))}</p>`;
+    if (!steps.length) html += `<p class="coverage-note">${bi('This link contains an allocation but no leveling order. Import a Wowhead share link with a saved order for level-by-level choices.', 'Länken innehåller en poängfördelning men ingen levelingordning. Importera en Wowhead-länk med sparad ordning för val vid varje level.')}</p>`;
+    html += talentTrees(b);
+    if (steps.length) html += `<section class="zone-section"><h2>${bi('Leveling plan', 'Levelingplan')}</h2><div class="talent-table">${steps.map(s => `<button class="talent-table-row ${s.level === c.level ? 'current' : ''}" data-talent="${s.tree}:${s.index}"><span>LV ${s.level}</span><div class="talent-table-name">${gameIcon(window.GAME_ASSETS.talents[s.id])}<span>${esc(s.name)} <span class="talent-rank">${s.rank}/${s.max}</span></span></div><span class="talent-tree-label">${positionLabel(s)}</span></button>`).join('')}</div></section>`;
     return html;
   }
   function questsPage() {
@@ -339,7 +323,7 @@
   function gearPage() {
     const c = character(),
       examples = D.quests.filter(q => q.classId && C.matchesCharacter(q, c) && q.reward && /Axe|Hauberk|Fist|Wolfsbane|Wand|Cloak|Ring/.test(q.reward));
-    return L.h`<div class="info-card"><div class="card-meta"><span class="level-tag">${esc(c.role)}</span><span>${esc(klass().name)} · ${esc(c.spec || L.t('Spec ej vald'))}</span></div><h2>Välj gear för det du spelar</h2><p style="margin-top:12px">Utgå från din valda specs aktuella klassguide. Vapnets egenskaper, användbara stats och förmågan att överleva behöver vägas ihop under leveling.</p><p>Fullständig statprioritering och dungeonloot för varje spec fylls på. Sparade Wowhead-builds ändrar inte automatiskt dessa råd.</p><a class="secondary-button" href="${esc(D.sources[c.classId])}" target="_blank" rel="noopener noreferrer">Öppna ${esc(klass().name)}-guiden ${icon('external')}</a></div><div class="section-top" style="margin-top:25px"><h2>Vapen och andra klassmål</h2></div><div class="quest-list">${examples.length ? examples.map(questCard).join('') : questCard({
+    return L.h`<div class="info-card"><div class="card-meta"><span class="level-tag">${esc(c.role)}</span><span>${esc(klass().name)}</span></div><h2>Välj gear för det du spelar</h2><p style="margin-top:12px">Utgå från din valda specs aktuella klassguide. Vapnets egenskaper, användbara stats och förmågan att överleva behöver vägas ihop under leveling.</p><p>Fullständig statprioritering och dungeonloot för varje spec fylls på. Sparade Wowhead-builds ändrar inte automatiskt dessa råd.</p><a class="secondary-button" href="${esc(D.sources[c.classId])}" target="_blank" rel="noopener noreferrer">Öppna ${esc(klass().name)}-guiden ${icon('external')}</a></div><div class="section-top" style="margin-top:25px"><h2>Vapen och andra klassmål</h2></div><div class="quest-list">${examples.length ? examples.map(questCard).join('') : questCard({
       id: 'gear-class-review',
       category: 'gear',
       level: 1,
@@ -381,6 +365,10 @@
   }
   function renderContent() {
     const c = character();
+    if (c.blank) {
+      $('#content').innerHTML = welcome();
+      return;
+    }
     $('#search-options').hidden = !query;
     let html;
     if (query) html = searchPage();else if (page === 'overview') html = overview();else if (page === 'zone-guide') html = zoneGuide();else if (page === 'controller') html = controllerPage();else if (C.CATEGORIES.includes(page) && !c.filters.categories.includes(page)) html = L.h`<div class="empty-state">${icon('sliders')}<h3>Kategorin är dold</h3><p>Du har dolt ${L.t(categoryNames[page]).toLowerCase()} för den här karaktären.</p><button class="secondary-button" data-action="filters">Ändra kategorier</button></div>`;else if (page === 'talents') html = talents();else if (page === 'quests') html = questsPage();else if (page === 'dungeons') html = dungeonsPage();else if (page === 'zones') html = zonesPage();else if (page === 'abilities') html = abilitiesPage();else if (page === 'gear') html = gearPage();else if (page === 'professions') html = professionsPage();else if (page === 'glossary') html = glossaryPage();else if (page === 'notes') html = L.h`<section class="info-card"><h2>Till nästa gång</h2><p style="margin-top:10px">Skriv ned nästa quest, var du parkerade karaktären eller vad du vill göra med gruppen.</p><label class="form-field"><span>Anteckningar för ${esc(c.name)}</span><textarea id="character-notes" class="notes-area" placeholder="Nästa gång ska jag…">${esc(c.notes)}</textarea></label><span class="note-footer">Sparas automatiskt för den här karaktären.</span></section>`;else {
@@ -389,11 +377,16 @@
     }
     $('#content').innerHTML = html;
   }
-  function go(id) {
-    page = nav.some(n => n[0] === id) ? id : 'overview';
+  function go(id, back = false) {
+    const nextPage = nav.some(n => n[0] === id) ? id : 'overview';
+    if (!back && (page !== nextPage || query)) navTrail.push({
+      page,
+      query
+    });
+    page = nextPage;
     query = '';
     $('#search').value = '';
-    history.replaceState(null, '', '#' + page);
+    history.pushState(null, '', '#' + page);
     closeMenu();
     renderShell();
     window.scrollTo({
@@ -407,25 +400,36 @@
   }
   function dialog(title, body, footer = '') {
     const el = $('#dialog');
-    $('#dialog-content').innerHTML = L.h`<div class="dialog-top"><h2>${title}</h2><button class="icon-button" data-action="close-dialog" aria-label="Stäng dialog">${icon('close')}</button></div><div class="dialog-body">${body}</div>${footer ? L.h`<div class="dialog-footer">${footer}</div>` : ''}`;
+    if (!el.open) dialogTrail = [];else if (title !== dialogTitle) dialogTrail.push({
+      title: dialogTitle,
+      html: $('#dialog-content').innerHTML
+    });
+    dialogTitle = title;
+    $('#dialog-content').innerHTML = `<div class="dialog-top"><button class="icon-button" data-action="back" aria-label="${bi('Back', 'Tillbaka')}">${icon('back')}</button><h2>${title}</h2><button class="icon-button" data-action="close-dialog" aria-label="${bi('Close dialog', 'Stäng dialog')}">${icon('close')}</button></div><div class="dialog-body">${body}</div>${footer ? `<div class="dialog-footer">${footer}</div>` : ''}`;
     if (!el.open) el.showModal();
   }
   function charactersDialog() {
-    dialog(L.t('Dina karaktärer'), L.h`<p>Välj vem som fortsätter äventyret. Varje karaktär har egna framsteg och inställningar.</p><div class="character-list">${state.characters.map(c => L.h`<button class="character-option ${c.id === state.activeId ? 'active' : ''}" data-character="${c.id}">${avatar(c)}<div><strong>${esc(c.name)}${c.demo ? L.m(' · Exempel') : ''}</strong><small>Level ${c.level} · ${esc(c.race)} ${DB.classes[c.classId].name} · ${c.faction}</small></div>${c.id === state.activeId ? icon('check') : icon('arrow')}</button>`).join('')}</div><div class="character-actions"><button class="primary-button" data-action="new-character">${icon('plus')} Ny karaktär</button><button class="secondary-button" data-action="edit-character">${icon('edit')} Redigera vald</button></div>`);
+    dialog(L.t('Dina karaktärer'), L.h`<p>Välj vem som fortsätter äventyret. Varje karaktär har egna framsteg och inställningar.</p><div class="character-list">${state.characters.map(c => L.h`<button class="character-option ${c.id === state.activeId ? 'active' : ''}" data-character="${c.id}">${avatar(c)}<div><strong>${esc(c.name || bi('New character', 'Ny karaktär'))}${c.demo ? L.m(' · Exempel') : ''}</strong><small>Level ${c.level} · ${esc(c.race)} ${DB.classes[c.classId]?.name || ''} · ${c.faction}</small></div>${c.id === state.activeId ? icon('check') : icon('arrow')}</button>`).join('')}</div><div class="character-actions"><button class="primary-button" data-action="new-character">${icon('plus')} Ny karaktär</button><button class="secondary-button" data-action="edit-character">${icon('edit')} Redigera vald</button></div>`);
   }
   function characterForm(edit = false) {
     const c = edit ? character() : C.createCharacter({
-      race: '',
-      classId: 'warrior',
-      faction: 'Horde'
-    });
-    dialog(edit ? L.t('Din karaktär') : L.t('Ett nytt äventyr'), L.h`<form id="character-form" data-edit="${edit}"><div class="form-grid"><label class="form-field wide"><span>Karaktärens namn</span><input name="name" value="${edit ? esc(c.name) : ''}" maxlength="50" placeholder="Vad heter din karaktär?" required autocomplete="off"></label><label class="form-field"><span>Klass</span><select name="classId" aria-label="Klass" ${edit ? 'disabled' : ''}>${Object.entries(DB.classes).map(([id, cl]) => L.h`<option value="${id}" ${c.classId === id ? 'selected' : ''}>${cl.name}</option>`).join('')}</select>${edit ? L.m('<span class="field-hint">Skapa en ny profil för en annan klass.</span>') : ''}</label><label class="form-field"><span>Faction</span><select name="faction" aria-label="Faction"><option ${c.faction === 'Horde' ? 'selected' : ''}>Horde</option><option ${c.faction === 'Alliance' ? 'selected' : ''}>Alliance</option></select></label><label class="form-field"><span>Ras</span><select name="race" aria-label="Ras">${['Human', 'Dwarf', 'Night Elf', 'Gnome', 'Orc', 'Undead', 'Tauren', 'Troll', 'Skyborne'].map(r => L.h`<option ${c.race === r ? 'selected' : ''}>${r}</option>`).join('')}</select><span class="field-hint">Välj samma ras och faction som i spelet.</span></label><label class="form-field"><span>Nuvarande level</span><input type="number" min="1" max="60" name="level" value="${c.level}" required></label><label class="form-field"><span>Roll</span><select name="role" aria-label="Roll">${['DPS', 'Healer', 'Tank'].map(r => L.h`<option ${c.role === r ? 'selected' : ''}>${r}</option>`).join('')}</select></label><label class="form-field"><span>Spec / inriktning</span><input name="spec" value="${esc(c.spec)}" placeholder="Till exempel Hybrid" maxlength="40"></label></div><h3>Professions</h3><div class="form-grid">${D.professions.map(p => L.h`<label class="form-check"><input type="checkbox" name="professions" value="${p.title}" ${c.professions.includes(p.title) ? 'checked' : ''}> ${p.title}</label>`).join('')}</div><p class="field-hint" style="margin-top:12px">Välj dina två huvudsakliga professions och de sekundära du använder.</p><div id="form-error" class="error-text" hidden></div><button type="submit" hidden></button></form>`, L.h`<button class="secondary-button" data-action="close-dialog">Avbryt</button><button class="primary-button" type="submit" form="character-form">${edit ? L.t('Spara karaktär') : L.t('Skapa karaktär')}</button>`);
+        classId: 'warrior',
+        race: 'Orc',
+        faction: 'Horde'
+      }),
+      configured = !!c.classId,
+      primary = D.professions.filter(p => !R.secondary.includes(p.title)),
+      secondary = D.professions.filter(p => R.secondary.includes(p.title));
+    dialog(edit ? bi('Your character', 'Din karaktär') : bi('New character', 'Ny karaktär'), `<form id="character-form" data-edit="${edit}"><div class="form-grid"><label class="form-field wide"><span>${bi('Character name', 'Karaktärens namn')}</span><input name="name" value="${edit ? esc(c.name) : ''}" maxlength="50" required autocomplete="off"></label><label class="form-field"><span>${bi('Class', 'Klass')}</span><select name="classId" required ${edit && configured ? 'disabled' : ''}>${!configured ? `<option value="">${bi('Choose class', 'Välj klass')}</option>` : ''}${Object.entries(DB.classes).map(([id, cl]) => `<option value="${id}" ${c.classId === id ? 'selected' : ''}>${cl.name}</option>`).join('')}</select></label><label class="form-field"><span>Faction</span><select name="faction" required><option ${c.faction === 'Horde' ? 'selected' : ''}>Horde</option><option ${c.faction === 'Alliance' ? 'selected' : ''}>Alliance</option></select></label><label class="form-field"><span>${bi('Race', 'Ras')}</span><select name="race" required></select></label><label class="form-field"><span>Level</span><input name="level" type="number" min="1" max="60" value="${c.level}" required></label><label class="form-field" id="role-field"><span>${bi('Role', 'Roll')}</span><select name="role"></select></label></div>${[[primary, bi('Primary professions · choose up to 2', 'Huvudprofessions · välj högst 2'), 'primary'], [secondary, bi('Secondary professions · choose any', 'Sekundära professions · välj fritt'), 'secondary']].map(([ps, title, kind]) => `<fieldset class="profession-group"><legend>${title}</legend><div class="profession-options">${ps.map(p => `<label class="form-check"><input type="checkbox" name="professions" data-profession-kind="${kind}" value="${esc(p.title)}" ${c.professions.includes(p.title) ? 'checked' : ''}>${gameIcon(window.GAME_ASSETS.professions[p.title])}<span>${esc(p.title)}</span></label>`).join('')}</div></fieldset>`).join('')}<div id="form-error" class="error-text" hidden></div><button type="submit" hidden></button></form>`, `<button class="secondary-button" data-action="close-dialog">${bi('Cancel', 'Avbryt')}</button><button class="primary-button" type="submit" form="character-form">${bi('Save character', 'Spara karaktär')}</button>`);
+    updateCharacterOptions(c.race, c.role);
+    limitProfessions();
   }
   function filterDialog() {
     const c = character();
     dialog(L.t('Välj vad du vill se'), L.h`<p>Inställningarna gäller ${esc(c.name)}. Sökfunktionen hittar även innehåll i dolda kategorier.</p><div class="filter-options">${C.CATEGORIES.map(cat => L.h`<label class="filter-option">${icon(categoryIcons[cat])}<span>${L.t(categoryNames[cat])}</span><input type="checkbox" data-category="${cat}" ${c.filters.categories.includes(cat) ? 'checked' : ''}></label>`).join('')}</div>`, L.h`<button class="secondary-button" data-action="all-categories">Visa alla kategorier</button><button class="primary-button" data-action="close-dialog">Klart</button>`);
   }
   function settings() {
+    if ($('#dialog').open && $('#language-select')) dialogTitle = L.t('Inställningar & backup');
     dialog(L.t('Inställningar & backup'), L.h`${preferencesMarkup()}<div class="settings-row"><span><strong>Automatisk sparning</strong><small>${brokenRaw ? L.t('Lagringen behöver ses över. Exportera säkerhetskopian nedan.') : foreignChange ? L.t('En annan flik har ändrat datan. Exportera ditt arbete och ladda sedan om.') : L.t('Aktiv i den här webbläsaren för alla karaktärer.')}</small></span>${icon(brokenRaw || foreignChange ? 'warning' : 'check')}</div><div class="settings-row"><span><strong>Offlineläge</strong><small>${location.protocol === 'file:' ? L.t('Öppna den publicerade sidan för att aktivera offlinecache.') : navigator.serviceWorker?.controller ? L.t('Guidens lokala filer är tillgängliga offline.') : L.t('Aktiveras när sidan har laddats via HTTPS.')}</small></span>${icon('wifi')}</div><div class="backup-notice">Profilerna finns i denna webbläsare. Exportera en backup om du ska byta enhet eller rensa webbplatsdata.</div><h3>Exportera och importera</h3><div class="button-row"><button class="primary-button" data-action="export">${icon('download')} Alla karaktärer</button><button class="secondary-button" data-action="export-character">${icon('download')} Bara ${esc(character().name)}</button><button class="secondary-button" data-action="import-backup">${icon('upload')} Importera backup</button>${brokenRaw ? L.m('<button class="danger-button" data-action="export-raw">Spara tidigare rådata</button>') : ''}</div><p class="field-hint" style="margin-top:12px">Importerade karaktärer läggs till som nya profiler. Dina befintliga profiler behålls.</p><h3>Vald karaktär</h3><div class="button-row"><button class="secondary-button" data-action="edit-character">${icon('edit')} Redigera ${esc(character().name)}</button><button class="danger-button" data-action="delete-character" ${state.characters.length <= 1 ? 'disabled' : ''}>Ta bort karaktär</button></div>${brokenRaw ? L.m('<div class="backup-notice">Tidigare data har skyddats från överskrivning. Exportera den först. Du kan sedan välja att starta om den lokala sparningen.</div><button class="danger-button" data-action="reset-broken">Starta om lokal sparning</button>') : ''}`);
   }
   function about() {
@@ -435,12 +439,6 @@
   function importBuild() {
     pendingBuild = null;
     dialog(L.t('Importera från Wowhead'), L.h`<p>Öppna kalkylatorn för Forever, välj dina talents och klistra in hela delningslänken. En sparad poängordning importeras också.</p><form id="build-import-form"><label class="form-field"><span>Buildens namn</span><input name="name" maxlength="80" placeholder="Till exempel Solo eller Resto"></label><label class="form-field" style="margin-top:13px"><span>Wowhead-länk</span><input name="url" type="url" required placeholder="https://www.wowhead.com/forever/talent-calc/…"></label><div id="build-import-error" class="error-text" hidden></div><div id="build-import-preview"></div></form><p style="margin-top:15px"><a class="small" href="https://www.wowhead.com/forever/talent-calc/${character().classId}" target="_blank" rel="noopener noreferrer">Öppna ${esc(klass().name)}-kalkylatorn ${icon('external')}</a></p>`, L.h`<button class="secondary-button" data-action="close-dialog">Avbryt</button><button class="primary-button" type="submit" form="build-import-form">Läs in och granska</button><button class="primary-button" data-action="save-build" id="save-build" hidden>Spara build</button>`);
-  }
-  function editOrder() {
-    const b = activeBuild();
-    if (!b) return;
-    const text = b.order.map(s => L.h`${s.tree + 1}:${s.index + 1}`).join('\n');
-    dialog(L.t('Redigera poängordning'), L.h`<p>Varje rad är en talentpoäng. Skriv <strong>träd:talang</strong>, till exempel <strong>2:2</strong>. Båda numren börjar på 1. Ordningen måste innehålla exakt de poäng som finns i din slutbuild.</p><form id="order-form"><label class="form-field"><span>Första talentpoängen vid level</span><input name="startLevel" type="number" min="5" max="10" value="${b.startLevel}" required></label><p class="field-hint">Standard är level 10. Justera om din karaktär har tidigare talentpoäng via Legacy.</p><label class="form-field"><span>Poängordning</span><textarea name="order" class="manual-order" spellcheck="false">${esc(text)}</textarea></label><div class="error-text" id="order-error" hidden></div><details style="margin-top:15px"><summary class="small">Visa talangnummer</summary>${klass().trees.map((t, i) => L.h`<h3>${i + 1}. ${esc(t.name)}</h3><div class="small">${t.talents.map((t, j) => L.h`${i + 1}:${j + 1} — ${esc(t.name)} (${b.allocations[i][j]} poäng i builden)`).join('<br>')}</div>`).join('')}</details></form>`, L.h`<button class="secondary-button" data-action="close-dialog">Avbryt</button><button class="primary-button" type="submit" form="order-form">Spara ordning</button>`);
   }
   function download(filename, text) {
     const blob = new Blob([text], {
@@ -480,7 +478,16 @@
       c.currentPlace = [z.title, ...z.places].includes(place) ? place : z.title;
       save();
       $('#dialog').close();
-      go('zone-guide');
+      go(page === 'overview' ? 'overview' : 'zone-guide');
+      return;
+    }
+    if (target.dataset.talent) {
+      const [tree, index] = target.dataset.talent.split(':').map(Number),
+        tal = klass().trees[tree]?.talents[index];
+      if (tal) dialog(esc(tal.name), `<div class="talent-detail">${gameIcon(window.GAME_ASSETS.talents[tal.id])}<p>${positionLabel({
+        ...tal,
+        treeName: klass().trees[tree].name
+      })}</p><p>${bi('Requires', 'Kräver')} ${tal.required} ${bi('points in this tree', 'poäng i trädet')} · ${bi('Ability minimum level', 'Förmågans lägsta level')} ${tal.minLevel}</p>${tal.requires.length ? `<p>${bi('Prerequisites', 'Förkrav')}: ${tal.requires.map(r => esc(klass().trees[tree].talents.find(t => t.id === r.id)?.name || r.id)).join(', ')}</p>` : ''}<a href="https://www.wowhead.com/forever/spell=${tal.spell}" target="_blank" rel="noopener noreferrer">Wowhead ${icon('external')}</a></div>`);
       return;
     }
     if (target.dataset.page) {
@@ -526,6 +533,15 @@
       zoneDialog();
       return;
     }
+    if (a === 'back') {
+      goBack();
+      return;
+    }
+    if (a === 'request-delete-build') {
+      const build = activeBuild();
+      if (build) dialog(bi('Delete build?', 'Ta bort build?'), `<p>${esc(build.name)}</p>`, `<button class="secondary-button" data-action="close-dialog">${bi('Cancel', 'Avbryt')}</button><button class="danger-button" data-action="delete-build">${bi('Delete build', 'Ta bort build')}</button>`);
+      return;
+    }
     if (a === 'level-up') changeLevel(c.level + 1);else if (a === 'level-down') changeLevel(c.level - 1);else if (a === 'menu') {
       $('#sidebar').classList.toggle('open');
       $('#menu-backdrop').hidden = !$('#sidebar').classList.contains('open');
@@ -558,7 +574,7 @@
       c.activeBuild = b.id;
       save();
       renderContent();
-    } else if (a === 'edit-order') editOrder();else if (a === 'edit-build') {
+    } else if (a === 'edit-build') {
       const b = activeBuild();
       dialog(L.t('Redigera build'), L.h`<form id="build-edit-form"><label class="form-field"><span>Namn</span><input name="name" maxlength="80" value="${esc(b.name)}" required></label></form><button class="danger-button" style="margin-top:20px" data-action="delete-build">Ta bort denna build</button>`, L.h`<button class="secondary-button" data-action="close-dialog">Avbryt</button><button class="primary-button" type="submit" form="build-edit-form">Spara</button>`);
     } else if (a === 'delete-build') {
@@ -598,7 +614,7 @@
     D = L.localize(RAW);
     document.documentElement.lang = L.language;
     document.documentElement.dataset.theme = state.settings.theme;
-    document.title = bi('Färdväg — your Forever leveling companion', 'Färdväg — din levelingkompis i Forever');
+    document.title = 'Questbound · Forever guide';
     document.querySelectorAll('[data-i18n]').forEach(el => el.textContent = L.t(el.dataset.i18n));
     document.querySelectorAll('[data-i18n-aria]').forEach(el => el.setAttribute('aria-label', L.t(el.dataset.i18nAria)));
     document.querySelectorAll('[data-i18n-placeholder]').forEach(el => el.placeholder = L.t(el.dataset.i18nPlaceholder));
@@ -613,7 +629,7 @@
   function sessionPanel() {
     const c = character(),
       z = D.zones.find(z => z.id === c.currentZone);
-    return L.h`<section class="session-panel" aria-label="${bi('Your zone and assistance level', 'Din zon och hjälpnivå')}"><div><h2>${icon('pin')} ${bi('Where are you?', 'Var är du?')}</h2><div class="session-zone-name">${z ? esc(z.title) : bi('Choose your current zone', 'Välj din nuvarande zon')}</div>${c.currentPlace && z && c.currentPlace !== z.title ? L.h`<p>${esc(c.currentPlace)} · ${bi('part of', 'del av')} ${esc(z.title)}</p>` : ''}<div class="session-buttons"><button class="secondary-button" data-action="choose-zone">${icon('search')} ${bi('Find zone or subzone', 'Sök zon eller subzon')}</button>${z ? L.h`<button class="text-button" data-page="zone-guide">${bi('Tips for this zone', 'Tips för zonen')} ${icon('arrow')}</button>` : ''}</div></div><div>${helpControl()}</div></section>`;
+    return `<section class="session-panel"><div><h2>${icon('pin')} ${bi('Current zone', 'Nuvarande zon')}</h2><div class="session-zone-name">${z ? esc(z.title) : bi('Choose a zone', 'Välj en zon')}</div>${c.currentPlace && z && c.currentPlace !== z.title ? `<p>${esc(c.currentPlace)}</p>` : ''}</div><button class="secondary-button" data-action="choose-zone">${icon('search')} ${bi('Find zone or subzone', 'Sök zon eller subzon')}</button></section>`;
   }
   function zoneDialog() {
     dialog(bi('Where are you in Azeroth?', 'Var i Azeroth är du?'), L.h`<p>${bi('Search for a zone, town or subzone. Choosing Crossroads selects The Barrens automatically.', 'Sök efter en zon, ort eller subzon. Väljer du Crossroads väljs The Barrens automatiskt.')}</p><label class="form-field"><span>${bi('Zone or subzone', 'Zon eller subzon')}</span><input id="zone-search" type="search" placeholder="Crossroads, Ratchet, Silverpine Forest…" autocomplete="off"></label><div id="zone-results" class="zone-picker-results" aria-live="polite"></div><p class="field-hint" style="margin-top:12px">${bi('Names match the English game client. More local place names can be added over time.', 'Namnen matchar den engelska spelklienten. Fler lokala platsnamn kan läggas till efter hand.')}</p>`);
@@ -710,7 +726,7 @@
       settings: bi('Game settings', 'Spelinställningar'),
       classes: bi('Class functions', 'Klassfunktioner')
     };
-    return L.h`<article class="controller-card"><div class="controller-group">${groups[item.group] || item.group}</div><h3>${esc(item.title)}</h3><div class="controller-keys">${item.keys.map((k, i) => L.h`${i ? '<span>→</span>' : ''}<kbd>${esc(controlLabel(k))}</kbd>`).join('')}</div><p>${esc(item.desc)}</p><a class="small" href="${esc(item.source)}" target="_blank" rel="noopener noreferrer">${bi('Client source', 'Klientkälla')} ${icon('external')}</a></article>`;
+    return L.h`<article class="controller-card"><div class="controller-group">${groups[item.group] || item.group}</div><h3>${esc(item.title)}</h3><div class="controller-keys">${item.keys.map((k, i) => L.h`${i ? '<span aria-hidden="true">' + icon('arrow') + '</span>' : ''}<kbd>${esc(controlLabel(k))}</kbd>`).join('')}</div><p>${esc(item.desc)}</p><a class="small" href="${esc(item.source)}" target="_blank" rel="noopener noreferrer">${bi('Client source', 'Klientkälla')} ${icon('external')}</a></article>`;
   }
   function controllerMatches(item, value) {
     const tokens = T.normalise(value).split(/\s+/).filter(Boolean);
@@ -724,10 +740,88 @@
     const c = character();
     return L.h`<section class="settings-preferences"><h3>${bi('Language and appearance', 'Språk och utseende')}</h3><div class="form-grid"><label class="form-field"><span>${bi('Language', 'Språk')}</span><select id="language-select"><option value="en" ${state.settings.language === 'en' ? 'selected' : ''}>English</option><option value="sv" ${state.settings.language === 'sv' ? 'selected' : ''}>Svenska</option></select></label><label class="form-field"><span>${bi('Color theme', 'Färgtema')}</span><select id="theme-select">${[['forest', bi('Forest', 'Skog')], ['dark', 'Dark / OLED'], ['light', bi('Light', 'Ljust')], ['frost', 'Frost'], ['parchment', bi('Parchment', 'Pergament')]].map(([id, name]) => L.h`<option value="${id}" ${state.settings.theme === id ? 'selected' : ''}>${name}</option>`).join('')}</select></label></div><h3>${bi('How much help would you like?', 'Hur mycket hjälp vill du ha?')}</h3>${helpControl('settings')}<label class="form-check"><input id="beginner-setting" type="checkbox" ${c.beginner ? 'checked' : ''}> ${bi('Beginner mode: explain names and show basic reminders', 'Nybörjarläge: förklara namn och visa grundläggande påminnelser')}</label><p class="field-hint">${bi('Assistance and beginner explanations are separate. Each character keeps its own assistance level; language and theme apply to this browser.', 'Hjälpnivå och nybörjarförklaringar är separata. Varje karaktär har egen hjälpnivå; språk och tema gäller i den här webbläsaren.')}</p></section>`;
   }
+  function gameIcon(name, alt = '', extra = '') {
+    const src = window.GAME_ASSETS?.icons[name];
+    return src ? `<img class="game-icon ${extra}" src="${src}" alt="${esc(alt)}" width="36" height="36">` : icon('sparkles');
+  }
+  function welcome() {
+    return `<section class="empty-state setup-card">${icon('plus')}<h2>${bi('No character configured', 'Ingen karaktär skapad')}</h2><button class="primary-button" data-action="edit-character">${bi('Create character', 'Skapa karaktär')}</button></section>`;
+  }
+  function positionLabel(s) {
+    return `${esc(s.treeName)} · ${bi('Row', 'Rad')} ${s.row + 1} · ${bi('Column', 'Kolumn')} ${s.col + 1}`;
+  }
+  function talentPointCard(label, s, b) {
+    const c = character();
+    return `<button class="summary-card talent-point-card" data-page="talents"><span class="summary-title">${icon('zap')} ${label}</span><div class="point-card-main">${s ? gameIcon(window.GAME_ASSETS.talents[s.id]) : icon('zap')}<strong>${s ? esc(s.name) : b ? b.order.length ? bi('No point scheduled', 'Ingen poäng planerad') : bi('No point order imported', 'Ingen poängordning importerad') : bi('Choose a build', 'Välj en build')}</strong></div><small>${s ? 'Level ' + s.level + ' · ' + s.rank + '/' + s.max : bi('Open Talents & Builds', 'Öppna Talents & Builds')}</small><small class="talent-position">${s ? positionLabel(s) : '&nbsp;'}</small></button>`;
+  }
+  function zoneOverview() {
+    const c = character(),
+      z = D.zones.find(z => z.id === c.currentZone);
+    if (!z) return '';
+    const qs = T.questsForZone(D, z, c, C.matchesCharacter).filter(q => c.filters.categories.includes(q.category) && (c.filters.showDone || !C.questDone(q, c)) && q.level <= c.level + 10).sort((a, b) => a.level - b.level),
+      ds = c.filters.categories.includes('dungeons') ? D.dungeons.filter(d => z.dungeonIds.includes(d.id) && C.matchesCharacter(d, c) && (c.helpLevel === 4 || d.level <= c.level + 10)) : [],
+      steps = c.filters.categories.includes('tips') && c.helpLevel >= 2 ? (z.localSteps || []).slice(0, c.helpLevel === 2 ? 2 : undefined) : [];
+    return `<section class="zone-overview info-card"><div class="section-top"><h2>${icon('map')} ${bi('Tips for', 'Tips för')} ${esc(z.title)}</h2><button class="text-button" data-page="zone-guide">${bi('More zone details', 'Mer om zonen')} ${icon('arrow')}</button></div><p>${esc(c.beginner && z.beginnerDesc ? z.beginnerDesc : z.desc)}</p>${z.faction !== 'Both' && z.faction !== c.faction ? `<p class="error-text">${bi('Mainly associated with', 'Hör främst till')} ${esc(z.faction)}</p>` : ''}${steps.length ? `<ol class="zone-route">${steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>` : ''}${qs.length ? `<div class="quest-list">${qs.map(questCard).join('')}</div>` : ''}${ds.map(d => `<details class="zone-dungeon" ${c.helpLevel >= 3 ? 'open' : ''}><summary>${esc(d.title)} · Level ${d.level}–${d.maxLevel} · ${bi('Quests and preparation', 'Quests och förberedelser')}</summary>${dungeonCard(d)}</details>`).join('')}${sourceLine(z)}</section>`;
+  }
+  function talentTrees(b) {
+    const c = character(),
+      steps = C.buildSteps(b, DB),
+      spent = klass().trees.map(t => t.talents.map(() => 0)),
+      now = steps.find(s => s.level === c.level),
+      next = steps.find(s => s.level > c.level);
+    steps.filter(s => s.level <= c.level).forEach(s => spent[s.tree][s.index]++);
+    return `<section class="talent-tree-section"><h2>${bi('Talent trees', 'Talentträd')}</h2><p class="small">${bi('Ranks show your imported plan through the current level. Click a talent for its position and requirements.', 'Ranks visar din importerade plan till nuvarande level. Klicka en talent för placering och förkrav.')}</p><div class="tree-legend"><span class="current-marker">${bi('This level', 'Denna level')}</span><span class="next-marker">${bi('Next point', 'Nästa poäng')}</span></div><div class="talent-trees">${klass().trees.map((t, tree) => `<section class="talent-tree"><h3>${esc(t.name)}</h3><div class="talent-grid" style="--tree-rows:${Math.max(...t.talents.map(x => x.row)) + 1}">${t.talents.map((tal, index) => `<button class="talent-node ${spent[tree][index] ? 'learned' : ''} ${now?.tree === tree && now.index === index ? 'current-point' : ''} ${next?.tree === tree && next.index === index ? 'next-point' : ''}" data-talent="${tree}:${index}" style="grid-row:${tal.row + 1};grid-column:${tal.col + 1}" aria-label="${esc(tal.name)}, ${esc(t.name)}, ${bi('row', 'rad')} ${tal.row + 1}, ${bi('column', 'kolumn')} ${tal.col + 1}, ${spent[tree][index]}/${tal.max}" title="${esc(tal.name)} · ${bi('Planned total', 'Planerad slutrank')} ${b.allocations[tree][index]}/${tal.max}">${gameIcon(window.GAME_ASSETS.talents[tal.id])}<span class="talent-node-rank">${spent[tree][index]}/${tal.max}</span><span class="talent-node-name">${esc(tal.name)}</span></button>`).join('')}</div></section>`).join('')}</div></section>`;
+  }
+  function updateCharacterOptions(preferredRace, preferredRole) {
+    const form = $('#character-form');
+    if (!form) return;
+    const classId = form.elements.classId.value,
+      faction = form.elements.faction.value,
+      race = form.elements.race,
+      role = form.elements.role,
+      oldRace = preferredRace ?? race.value,
+      oldRole = preferredRole ?? role.value,
+      races = R.availableRaces(classId, faction),
+      roles = R.roles[classId] || [];
+    race.innerHTML = races.map(r => `<option ${r === oldRace ? 'selected' : ''}>${esc(r)}</option>`).join('');
+    role.innerHTML = roles.map(r => `<option ${r === oldRole ? 'selected' : ''}>${r}</option>`).join('');
+    $('#role-field').hidden = roles.length <= 1;
+  }
+  function limitProfessions() {
+    const choices = [...document.querySelectorAll('#character-form input[data-profession-kind="primary"]')],
+      full = choices.filter(el => el.checked).length >= 2;
+    choices.forEach(el => el.disabled = full && !el.checked);
+  }
+  function goBack() {
+    if ($('#dialog').open) {
+      if (dialogTrail.length) {
+        const prev = dialogTrail.pop();
+        $('#dialog-content').innerHTML = prev.html;
+        dialogTitle = prev.title;
+      } else $('#dialog').close();
+      return;
+    }
+    const prev = navTrail.pop();
+    if (!prev) return;
+    page = prev.page;
+    query = prev.query;
+    $('#search').value = query;
+    history.replaceState(null, '', '#' + page);
+    renderShell();
+    window.scrollTo({
+      top: 0,
+      behavior: 'instant'
+    });
+  }
   const byId = new Map([...RAW.quests, ...RAW.misc, ...DB.abilities, ...RAW.professions, ...RAW.dungeons.flatMap(d => d.quests)].map(q => [q.id, q]));
   document.addEventListener('change', e => {
     const el = e.target,
       c = character();
+    if (el.closest?.('#character-form')) {
+      if (['classId', 'faction'].includes(el.name)) updateCharacterOptions();
+      if (el.name === 'professions') limitProfessions();
+      return;
+    }
     if (el.id === 'language-select' || el.id === 'theme-select') {
       if (el.id === 'language-select') state.settings.language = el.value === 'sv' ? 'sv' : 'en';else state.settings.theme = ['forest', 'dark', 'light', 'frost', 'parchment'].includes(el.value) ? el.value : 'forest';
       save();
@@ -874,18 +968,23 @@
       }
       const values = {
         name: f.get('name').trim(),
-        classId: edit ? character().classId : f.get('classId'),
+        classId: edit && !character().blank ? character().classId : f.get('classId'),
         race: f.get('race'),
         faction: f.get('faction'),
         level: +f.get('level'),
         role: f.get('role'),
-        spec: f.get('spec'),
         professions: prof
       };
       if (!values.name) return;
+      if (!R.valid(values)) {
+        $('#form-error').hidden = false;
+        $('#form-error').textContent = bi('Choose a valid class, faction, race and role.', 'Välj en giltig klass, faction, ras och roll.');
+        return;
+      }
       if (edit) {
         Object.assign(character(), values, {
-          demo: false
+          demo: false,
+          blank: false
         });
       } else {
         if (state.characters.length >= 100) {
@@ -893,10 +992,6 @@
           return;
         }
         const c = C.createCharacter(values);
-        if (c.classId === 'shaman') {
-          c.builds = [builtIn()];
-          c.activeBuild = c.builds[0].id;
-        }
         state.characters.push(c);
         state.activeId = c.id;
       }
@@ -922,42 +1017,6 @@
         error.textContent = L.m(err.message);
         $('#build-import-preview').innerHTML = '';
         $('#save-build').hidden = true;
-      }
-    } else if (e.target.id === 'order-form') {
-      e.preventDefault();
-      const b = activeBuild(),
-        f = new FormData(e.target),
-        lines = f.get('order').trim().split(/\s+/).filter(Boolean),
-        counts = klass().trees.map(t => t.talents.map(() => 0));
-      try {
-        const order = lines.map(line => {
-          const m = line.match(/^([1-3]):([1-9]\d?)$/);
-          if (!m) throw Error(L.t('Varje rad måste ha formatet träd:talang.'));
-          const tree = +m[1] - 1,
-            index = +m[2] - 1;
-          if (!klass().trees[tree].talents[index]) throw Error(L.t('Ett talangnummer finns inte.'));
-          counts[tree][index]++;
-          return {
-            tree,
-            index
-          };
-        });
-        if (JSON.stringify(counts) !== JSON.stringify(b.allocations)) throw Error(L.t('Ordningen måste innehålla exakt slutbuildens poängfördelning.'));
-        const next = {
-            ...b,
-            order,
-            startLevel: C.clamp(f.get('startLevel'), 5, 10)
-          },
-          warn = C.validateOrder(next, DB);
-        if (warn.length) throw Error(L.m('Poäng ') + warn[0].point + ': ' + warn[0].message);
-        Object.assign(b, next);
-        save();
-        $('#dialog').close();
-        renderContent();
-        notify(L.t('Poängordningen är sparad.'));
-      } catch (err) {
-        $('#order-error').hidden = false;
-        $('#order-error').textContent = L.m(err.message);
       }
     } else if (e.target.id === 'build-edit-form') {
       e.preventDefault();
@@ -1002,6 +1061,8 @@
     if (e.key === 'Escape') closeMenu();
   });
   window.addEventListener('hashchange', () => {
+    query = '';
+    $('#search').value = '';
     page = location.hash.slice(1) || 'overview';
     renderShell();
   });

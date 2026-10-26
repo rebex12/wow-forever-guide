@@ -514,7 +514,7 @@
     desc
   }));
   window.GUIDE_CONTENT = {
-    version: '0.2.0',
+    version: '0.3.0',
     updated: '2026-10-26',
     sources,
     quests,
@@ -524,7 +524,7 @@
     professions,
     glossary,
     notes: 'Första utkastet innehåller ett urval klass- och dungeonquests, inte en komplett questdatabas. Namn och träningsnivåer för abilities samt talangfakta kommer från Wowheads aktuella Forever-kalkylator. Inträdeskrav är databasuppgifter och kan behöva bekräftas i spelet. Information över level 30 och detaljerade resrutter byggs ut löpande.',
-    changelog: [{
+    changelog: [{date:'2026-10-26',version:'0.3.0',text:{en:'Questbound branding, a blank first profile, in-game icons, visual talent trees with current and next choices, build deletion, back navigation, class-aware character options, grouped professions, zone tips on Overview, ordered complete task lists, clearer controller arrows and a simpler interface.',sv:'Questbound, tom startprofil, spelikoner, visuella talentträd med nuvarande och nästa val, borttagning av builds, bakåtknapp, klassanpassade karaktärsval, uppdelade professions, zontips på Overview, kompletta uppgifter i levelordning, tydligare controllerpilar och enklare gränssnitt.'}}, {
       date: '2026-10-26', version: '0.2.0',
       text: {en: 'English by default with Swedish language choice; five themes including OLED dark mode; saved zone and subzone search; four assistance levels; beginner-only basics and clearer zone descriptions; searchable controller reference. Existing profile data is preserved.', sv: 'Engelska som standard med svenskt språkval; fem teman inklusive OLED-mörkerläge; sparad zon- och subzonsökning; fyra hjälpnivåer; grundtips bara för nybörjare och tydligare zontexter; sökbar handkontrollsguide. Befintliga profiluppgifter bevaras.'}
     }, {

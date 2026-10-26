@@ -61,21 +61,21 @@ function app(){
   const elements=new Map(),events={};
   const element=s=>{if(!elements.has(s))elements.set(s,{innerHTML:'',textContent:'',value:'',hidden:false,dataset:{},classList:{toggle(){},add(){},remove(){}},setAttribute(){},addEventListener(){},focus(){},close(){this.open=false},showModal(){this.open=true}});return elements.get(s);};
   const document={querySelector:element,querySelectorAll:()=>[],addEventListener:(n,f)=>events[n]=f,documentElement:{dataset:{}},body:{classList:{toggle(){}}}};
-  const window={addEventListener(){},scrollTo(){},isSecureContext:false};const storage=new Map();const context={window,document,location:{hash:'',protocol:'http:'},history:{replaceState(){}},navigator:{onLine:true},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},getComputedStyle:()=>({getPropertyValue:()=> '#000'}),URL,console,setTimeout:()=>1,clearTimeout(){}};
-  vm.createContext(context);for(const f of ['i18n.js','locales.js','catalog.js','content.js','core.js','guide-tools.js','zone-data.js','controller-data.js'])vm.runInContext(file(f),context);
-  vm.runInContext(file('app.js').replace('  fillIcons();', '  window.testAPI={state,character,go,settings,renderShell,renderContent,searchPage,questCard,zoneCard,overview,controllerPage};\n  fillIcons();'),context);
+  const window={addEventListener(){},scrollTo(){},isSecureContext:false};const storage=new Map();const context={window,document,location:{hash:'',protocol:'http:'},history:{replaceState(){},pushState(){}},navigator:{onLine:true},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},getComputedStyle:()=>({getPropertyValue:()=> '#000'}),URL,console,setTimeout:()=>1,clearTimeout(){}};
+  vm.createContext(context);for(const f of ['i18n.js','locales.js','catalog.js','content.js','core.js','guide-tools.js','zone-data.js','controller-data.js','character-rules.js','game-assets.js'])vm.runInContext(file(f),context);
+  vm.runInContext(file('app.js').replace('  fillIcons();', '  window.testAPI={state,character,go,settings,renderShell,renderContent,searchPage,questCard,zoneCard,overview,controllerPage,actionableItems,summary,builtIn,talents,goBack};\n  fillIcons();'),context);
   return {api:window.testAPI,element,document,events,storage};
 }
 test('every page renders in both languages and preserves user-written notes',()=>{
-  const a=app(),c=a.api.character();c.name='Spara';c.notes='Spara och Visa <script>alert(1)</script>';
+  const a=app(),c=a.api.character();Object.assign(c,C.createCharacter({name:'Spara',level:20}));c.name='Spara';c.blank=false;c.notes='Spara och Visa <script>alert(1)</script>';
   for(const lang of ['en','sv']){a.api.state.settings.language=lang;for(const page of ['overview','talents','quests','dungeons','zones','zone-guide','abilities','gear','professions','notes','glossary','controller']){a.api.go(page);assert(a.element('#content').innerHTML.length>20,page);assert(!a.element('#content').innerHTML.includes('[object Object]'),page);assert(!a.element('#content').innerHTML.includes('undefined'),page);}a.api.go('notes');assert(a.element('#content').innerHTML.includes('Spara och Visa &lt;script&gt;alert(1)&lt;/script&gt;'));assert.equal(a.document.documentElement.lang,lang);}
 });
 test('detailed assistance expands quest steps and highest assistance survives compact mode',()=>{
-  const a=app(),c=a.api.character();c.helpLevel=4;c.compact=true;c.filters.view='all';const card=a.api.questCard({id:'test',title:'Test',category:'quests',level:1,steps:['One','Two']});assert.match(card,/<details[^>]+open/);
-  const html=a.api.overview();assert(!html.includes('Matched place'));assert.match(html,/for="session-help-level"/);
+  const a=app(),c=a.api.character();Object.assign(c,C.createCharacter({level:20}));c.blank=false;c.helpLevel=4;c.compact=true;c.filters.view='all';const card=a.api.questCard({id:'test',title:'Test',category:'quests',level:1,steps:['One','Two']});assert.match(card,/<details[^>]+open/);
+  const html=a.api.overview();assert(!html.includes('Matched place'));assert(!html.includes('session-help-level'));a.api.settings();assert.match(a.element('#dialog-content').innerHTML,/settings-help-level/);
 });
 test('all new scripts and styles are cached for offline use',()=>{
-  const sw=file('sw.js'),html=file('index.html');for(const match of html.matchAll(/(?:src|href)="\.\/([^"#]+\.(?:js|css))"/g))assert(sw.includes("'./"+match[1]+"'"),match[1]);assert.match(sw,/0\.2\.0/);
+  const sw=file('sw.js'),html=file('index.html');for(const match of html.matchAll(/(?:src|href)="\.\/([^"#]+\.(?:js|css))"/g))assert(sw.includes("'./"+match[1]+"'"),match[1]);assert(sw.includes("'"+data().GUIDE_CONTENT.version+"'"));
 });
 test('all five palettes keep normal text readable on their main surfaces',()=>{
   const css=file('styles.css')+'\n'+file('themes.css');
@@ -89,4 +89,37 @@ test('all five palettes keep normal text readable on their main surfaces',()=>{
     for(const fg of ['text','muted','faint','accent'])for(const bg of ['bg','panel','panel2'])assert(contrast(palette[fg],palette[bg])>=4.5,theme+' '+fg+' on '+bg);
     if(theme==='dark')assert.equal(palette.bg,'#000000');
   }
+});
+
+
+test('first launch and saved unconfigured profile stay empty',()=>{
+ const a=app(),c=a.api.character();assert.equal(c.name,'');assert.equal(c.classId,'');assert.equal(c.blank,true);assert.equal(c.builds.length,0);assert.equal(c.professions.length,0);
+ assert.match(a.element('#content').innerHTML,/Create character/);assert(!a.element('#content').innerHTML.includes('Loreia'));
+ const restored=C.normalise(JSON.parse(a.storage.get(C.KEY)),data().FOREVER_CATALOG);assert.equal(restored.characters[0].blank,true);assert.equal(restored.characters[0].classId,'');
+});
+test('Forever class, faction and role choices exclude invalid combinations',()=>{
+ const R=require('../character-rules.js');assert.deepEqual(R.availableRaces('paladin','Horde'),['Undead']);assert(!R.availableRaces('paladin','Horde').includes('Orc'));
+ assert(R.availableRaces('shaman','Alliance').includes('Dwarf'));assert(R.availableRaces('mage','Horde').includes('Orc'));assert(!R.availableRaces('mage','Horde').includes('Skyborne'));assert(R.availableRaces('mage','Alliance').includes('Skyborne'));assert(!R.availableRaces('shaman','Alliance').includes('Skyborne'));
+ for(const c of ['mage','warlock','hunter','rogue'])assert.deepEqual(R.roles[c],['DPS']);assert(R.roles.shaman.includes('Healer'));assert(!R.roles.shaman.includes('Tank'));
+ const c={classId:'shaman',faction:'Horde',race:'Skyborne',role:'Healer',professions:['Skinning','Leatherworking',...R.secondary]};assert(R.valid(c));assert(!R.valid({...c,professions:[...c.professions,'Mining']}));
+});
+test('All tasks stay in ascending level order and completed level-one tasks survive leveling',()=>{
+ const a=app(),c=a.api.character();Object.assign(c,C.createCharacter({name:'Test',level:1}));c.blank=false;c.filters.view='all';c.filters.showDone=true;c.done['first-town']=true;c.done['flight-paths']=true;
+ const before=a.api.actionableItems().map(q=>q.id);assert(before.includes('first-town'));c.level=2;
+ const tasks=a.api.actionableItems();assert(tasks.some(q=>q.id==='first-town'));assert(tasks.some(q=>q.id==='flight-paths'));assert(tasks.every((q,i)=>!i||tasks[i-1].level<=q.level));
+ const html=a.api.overview();assert(html.includes('data-check="first-town"'));assert(html.includes('data-check="flight-paths"'));assert.match(html,/data-check="first-town"[^>]*checked/);
+});
+test('current and next talent cards use exact imported levels and real tree positions',()=>{
+ const a=app(),c=a.api.character();Object.assign(c,C.createCharacter({name:'Test',level:20}));c.blank=false;const b=a.api.builtIn();c.builds=[b];c.activeBuild=b.id;
+ const html=a.api.summary();assert(html.includes('Talent at this level'));assert(html.includes('Next talent point'));assert(html.includes('Level 20'));assert(html.includes('Level 21'));assert(html.includes('Row'));assert(html.includes('Column'));
+ const talents=a.api.talents();assert(talents.includes('data-talent='));assert(!talents.includes('data-action="edit-order"'));assert(talents.includes('data-action="request-delete-build"'));assert(talents.includes('class="talent-grid"'));assert(talents.includes('current-point'));assert(talents.includes('next-point'));
+});
+test('Overview contains selected-zone guidance and no assistance controls or greetings',()=>{
+ const a=app(),c=a.api.character();Object.assign(c,C.createCharacter({level:20,currentZone:'zone-barrens',currentPlace:'Crossroads'}));c.blank=false;const html=a.api.overview();assert(html.includes('Tips for The Barrens'));assert(html.includes('Wailing Caverns'));assert(!html.includes('type="range"'));assert(!html.includes('Hello,'));assert(!file('index.html').includes('id="beginner-toggle"'));assert(!html.includes('Level and checkmarks are saved automatically'));
+});
+test('back navigation returns to the previous app page',()=>{
+ const a=app();Object.assign(a.api.character(),C.createCharacter({name:'Test'}),{blank:false});a.api.go('talents');a.api.go('notes');a.api.goBack();assert.match(a.element('#page-heading').innerHTML,/Talents/);a.api.goBack();assert.match(a.element('#page-heading').innerHTML,/Overview/);
+});
+test('every talent uses a bundled game icon and each catalogue position stays in its grid',()=>{
+ const window={};vm.runInNewContext(file('game-assets.js'),{window});const assets=window.GAME_ASSETS;for(const cl of Object.values(data().FOREVER_CATALOG.classes))for(const t of cl.trees)for(const tal of t.talents){assert(assets.icons[assets.talents[tal.id]],tal.name);assert(tal.row>=0&&tal.col>=0&&tal.col<4);}
 });
