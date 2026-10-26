@@ -46,3 +46,24 @@ Inträde enligt zondatabasen kan skilja sig från äldre Classic-regler och frå
 
 - https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site
 - https://docs.github.com/en/pages/getting-started-with-github-pages/creating-a-github-pages-site
+
+## Handkontroll, version 0.2.0
+
+Blizzards klient-UI-kod, speglad i `Gethe/wow-ui-source`, grenen `forever`, kontrollerad 26 oktober 2026. Alla källänkar i appens handkontrollsguide är låsta till revision `ca8368f2f2380cbe696854f7f2646387c278a61b`:
+
+- https://github.com/Gethe/wow-ui-source/tree/ca8368f2f2380cbe696854f7f2646387c278a61b/Interface/AddOns
+- `Blizzard_Gamepad/UI/Radials/GamepadRadial.lua`: radialval, menysidor och paneler.
+- `Blizzard_GamepadActionBars/MainActionBarFrame.lua`: grundläggande frontknappar.
+- `Blizzard_GamepadSmartNavigation/SmartNavigation.lua`: panelnavigation.
+- `Blizzard_GamepadActionBars/TargetActionBars/ShortcutsActionBar.lua`: genvägar med båda axelknapparna.
+- `FriendlyTargetingActionBar.lua` och `HostileTargetingActionBar.lua` i samma mapp: målval och kontextaktioner.
+- `Blizzard_GamepadActionBars/ActionBindingUtil.lua`: actionbar-modifierare.
+- `Blizzard_GamepadActionBars/Camelot/ClassSpellFlyout.lua`: klassflyouts.
+- `Blizzard_SettingsDefinitions_Shared/Gamepad.lua`: inställningar.
+- `Blizzard_SharedXML/Shared/GamepadConstants.lua`: fysisk placering av frontknappar.
+
+Instruktionerna är egna sammanfattningar av funktioner och knappmappning; klientkod levereras inte med appen. De har inte testats i spelklienten. Menu/View-öppnare och enhetsetiketter är markerade som sådant som behöver jämföras med spelets knappförklaring. Modifierarsidor kan bytas; actionbar-förmågor beror på spelarens egna placeringar. Villkorliga paneler märks med att de behöver vara tillgängliga. Guiden omfattar dokumenterade funktioner, inte ett löfte om varje kontextåtgärd i varje klientversion.
+
+## Zon- och subzonsökning, version 0.2.0
+
+Zonkatalogen har utökats från samma Forever-zondatabas. Nya zoner har preliminär status; exakta rutter har inte konstruerats från levelintervall. Lokala ortsnamn och dungeonkopplingar är en explicit uppslagstabell. Platser som Crossroads och Ratchet kopplas till The Barrens. Valet är manuellt, inte automatisk positionsavläsning från spelet. Förberedelserna är redaktionella råd. The Barrens hänvisar till Wailing Caverns-förquestsen som redan dokumenterats i dungeonurvalet.

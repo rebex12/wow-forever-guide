@@ -1,6 +1,6 @@
 # Färdväg — WoW Forever levelingguide
 
-Ett första utkast av en svensk, mobilvänlig levelingkompis för alla nio klasser. Engelska spelnamn behålls. Appen använder vanlig HTML, CSS och JavaScript och behöver ingen installation eller byggprocess.
+Version 0.2.0 av en mobilvänlig levelingkompis för alla nio klasser. Engelska är standardspråk och svenska finns som språkval. Engelska spelnamn behålls. Appen använder vanlig HTML, CSS och JavaScript och behöver ingen installation eller byggprocess.
 
 ## Publicera med GitHub Pages
 
@@ -31,15 +31,24 @@ Alla resurslänkar, manifest och service worker använder relativa sökvägar, s
 - Responsiv layout för mobil, surfplatta och dator. Funktionerna använder tryck/klick och tangentbord.
 - Offlinecache och webbappmanifest. Första besöket måste göras online via HTTPS eller localhost. Appens egna filer cachelagras; externa Wowhead-sidor är tillgängliga online.
 
-## ToDo – nästa version
+## Nytt i 0.2.0
 
-- [ ] Lägg till språkval för gränssnitt och guideinnehåll: **engelska som standardspråk** och möjlighet att växla till **svenska**. Spara språkvalet lokalt mellan besöken. Behåll engelska spelnamn så de matchar spelet.
+- Engelska som standard och svenska som val under **Settings → Language**. Gränssnitt och guideförklaringar byter språk. Egna namn och anteckningar lämnas orörda.
+- Fem sparade färgteman: Forest, Dark / OLED, Light, Frost och Parchment. OLED-temat har svart huvudbakgrund.
+- **My zone / Min zon**: sök zoner, orter och subzoner i samma fält. Crossroads och Ratchet väljer The Barrens. Valet sparas separat för varje profil.
+- Zonhjälp med förberedelser, relevanta klassuppgifter och länkade dungeonquests med förkrav där underlag finns. Kategorifiltren gäller även här.
+- Fyra nivåer av levelinghjälp. Högsta nivån visar alla matchande uppgifter och öppnar dokumenterade queststeg, även i kompakt spelläge.
+- Grundtips om första stadsbesöket, flygpunkter, dungeonförberedelser och träningsguld visas bara i nybörjarläget. Nybörjartexter förklarar bland annat orterna Crossroads/Ratchet och dungeonen Wailing Caverns direkt i zonkorten.
+- Sökbar **Controller support / Handkontroll** med Xbox-, PlayStation- och generiska knappnamn, menynavigering, snabbkommandon, målval, actionbars och klassfunktioner.
+- Samma lagringsnyckel och profilschema. Befintliga avbockningar, anteckningar, builds och filter följer med. Språk och tema gäller hela webbläsaren; zon, hjälpnivå och handkontrollstyp hör till profilen.
+
+Hjälpnivån styr mängden instruktioner. Nybörjarläget styr grundläggande förklaringar och påminnelser. De kan väljas oberoende av varandra.
 
 ## Innehållets omfattning
 
 **Detta är ett funktionsutkast, inte en komplett eller självtestad questdatabas.**
 
-Klass- och dungeonquests är ett urval. Flera exakta queststarter, rasvarianter, belöningar och fullständiga dungeonquestlistor behöver kompletteras. Gearsektionen har klassmål och länkar men inte full statprioritering eller lootlistor för alla specs. Zonförslagen är övergripande och innehåller inte en full quest-för-quest-rutt. Träningslistan visar första rankens nivå, inte alla senare ranks eller kostnader. Innehåll efter level 30 är avsett att byggas ut.
+Klass- och dungeonquests är ett urval. Flera exakta queststarter, rasvarianter, belöningar och fullständiga dungeonquestlistor behöver kompletteras. Gearsektionen har klassmål och länkar men inte full statprioritering eller lootlistor för alla specs. Zonhjälpen innehåller förberedelser och dokumenterade queststeg, men ännu ingen full quest-för-quest-rutt för alla zoner. Högsta hjälpnivån visar det dokumenterade underlaget. Träningslistan visar första rankens nivå, inte alla senare ranks eller kostnader. Innehåll efter level 30 är avsett att byggas ut.
 
 Inträdeskrav hämtas från Forever-zondatabasen och visas separat från guiderna om rekommenderad level. Ett nollvärde i databasen visas som ett okänt krav. Uppgifterna behöver vid behov verifieras i spelklienten; gamla Classic-kommentarer används inte som bekräftelse på Forever-regler.
 
@@ -51,6 +60,8 @@ Status visas vid innehållet:
 
 Källor och hämtningstid finns i `SOURCES.md` och i appen. Datakatalogen innehåller faktauppgifter (namn, nivåer, ranktak och förkrav), inte kopierade beskrivningstexter eller Wowheads programkod.
 
+Handkontrollsguiden bygger på UI-koden för Forever-klienten vid en fast källrevision. Den är inte självtestad i spelet. Spelets knappförklaringar gäller i första hand; tillgängliga paneler, modifierarbyten och egna inställningar kan ändra knapparna. Menu/View-knappar behöver jämföras med enhetens knappförklaring. Appen ändrar inga spelinställningar och synkroniserar inte automatiskt med spelet.
+
 ## Spara och uppdatera
 
 Karaktärer finns i webbläsarens `localStorage`, under nyckeln `wayfarer.forever.v1`. De skickas inte till GitHub eller någon annan backend. Olika enheter och webbläsare har separata profiler. Rensning av webbplatsdata kan ta bort profilerna; använd export för backup. Samtidiga ändringar i två flikar ger en varning och skyddar mot fortsatt överskrivning tills sidan laddas om.
@@ -61,7 +72,7 @@ Vid innehållsuppdateringar:
 
 1. Ändra uppgifterna i `content.js` eller `catalog.js` och behåll befintliga, stabila innehålls-ID:n.
 2. Uppdatera datum och ändringslista i `content.js`.
-3. Öka cacheversionen i `sw.js` när publicerade filer ändras.
+3. Öka cacheversionen i `sw.js` när publicerade filer ändras. Lägg nya lokala resurser i dess fillista. Uppdateringsmeddelandet erbjuder omladdning när en ny worker har installerats.
 4. Kör testerna och publicera till samma repository och adress.
 
 Karaktärsdata hålls separat från innehållet. Byt inte lagringsnyckel eller dataschema utan en planerad migrering. Vid byte av domän eller projektadress bör profilerna exporteras och importeras på den nya adressen.

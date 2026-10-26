@@ -2,10 +2,10 @@
 // Relative URLs keep GitHub Pages project sites and subfolders working.
 const SCOPE = new URL(self.registration.scope).pathname;
 const PREFIX = 'fardvag-' + SCOPE.replace(/[^a-z0-9]/gi,'_') + '-';
-const CACHE = PREFIX + '0.1.0';
-const FILES = ['./','./index.html','./styles.css','./catalog.js','./content.js','./core.js','./app.js','./manifest.webmanifest','./assets/compass.svg'];
+const CACHE = PREFIX + '0.2.0';
+const FILES = ['./','./index.html','./styles.css','./themes.css','./i18n.js','./locales.js','./guide-tools.js','./zone-data.js','./controller-data.js','./catalog.js','./content.js','./core.js','./app.js','./manifest.webmanifest','./assets/compass.svg'];
 const URLS = FILES.map(p=>new URL(p,self.registration.scope).href);
-self.addEventListener('install',event=>event.waitUntil((async()=>{const cache=await caches.open(CACHE);await cache.addAll(URLS);await self.skipWaiting();})()));
+self.addEventListener('install',event=>event.waitUntil((async()=>{const cache=await caches.open(CACHE);try{await cache.addAll(URLS);}catch(error){await caches.delete(CACHE);throw error;}await self.skipWaiting();})()));
 self.addEventListener('activate',event=>event.waitUntil((async()=>{for(const key of await caches.keys())if(key.startsWith(PREFIX)&&key!==CACHE)await caches.delete(key);await self.clients.claim();})()));
 self.addEventListener('fetch',event=>{
  if(event.request.method!=='GET')return;
