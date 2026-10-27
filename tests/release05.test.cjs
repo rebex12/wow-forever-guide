@@ -85,3 +85,13 @@ test('mobile pinch zoom never auto-opens a zone and gestures cannot trigger a ta
  assert(source.includes('suppressClick=true;zoom(distance/gesture.distance'));
  assert(source.includes('if(!points.size)suppressClick=false'));
 });
+
+test('adjacent sibling navigation preserves the saved parent zoom',()=>{
+ const maps={world:{id:'world'},continent:{id:'continent',parent:'world'},west:{id:'west',parent:'continent'},east:{id:'east',parent:'continent'}};
+ const original={z:3.1,px:105,py:-60};
+ const enter=A.mapNavigation(maps,maps.continent,'west',original,[]);
+ const sibling=A.mapNavigation(maps,maps.west,'east',{z:1,px:0,py:0},enter.history);
+ assert.deepEqual(sibling.history,enter.history);
+ const out=A.mapNavigation(maps,maps.east,'continent',{z:1,px:0,py:0},sibling.history);
+ assert.deepEqual(out.restore,{id:'continent',...original});
+});
