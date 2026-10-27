@@ -35,6 +35,7 @@
       },
       beginner: true,
       helpLevel: clamp(values.helpLevel ?? 2, 1, 4),
+      atlasMap: clean(values.atlasMap || 'world', 100),
       currentZone: clean(values.currentZone || '', 100),
       currentPlace: clean(values.currentPlace || '', 100),
       controller: ['xbox', 'playstation', 'generic'].includes(values.controller) ? values.controller : 'xbox',
@@ -110,6 +111,7 @@
       allocations,
       order,
       startLevel: clamp(b.startLevel ?? 10, 5, 10),
+      calculator: b.calculator===true,
       custom: !!b.custom,
       source: clean(b.source || '', 300)
     };

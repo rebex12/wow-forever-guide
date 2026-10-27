@@ -49,3 +49,10 @@ Profiles are saved in the browser. Export and import JSON backups to move them b
 Questbound contains a documented selection, not a complete quest database or leveling route. Detailed provenance and coverage limits are recorded in [SOURCES.md](SOURCES.md).
 
 Questbound is an unofficial companion. World of Warcraft, game names, artwork, and in-game descriptions belong to Blizzard Entertainment.
+
+
+The interactive world atlas uses Forever game artwork for Azeroth, both continents, and 50 zone and city maps. Search zones and known places, drag to pan, pinch or scroll to zoom, and select a zone for Overview tips. The world and continent maps are bundled; individual zone maps require an internet connection on first opening and are then cached for offline use. Subzone names remain those printed on the game maps.
+
+Create talent builds directly in Questbound, with up to 51 points, prerequisite checks, and an automatically recorded leveling order. Desktop controls use hover for descriptions, click to add a point, and right-click to remove one. On touch screens, the first tap selects the talent and shows its description; another tap adds a point, and holding the selected talent removes one. Existing imported builds can be edited as a separate copy.
+
+Overview includes crafted equipment suggestions alongside quests and milestones, with profession, build, documented equip level, and known recipe-skill requirements taken into account. Mark a suggestion complete after crafting or considering it. Missing requirements are labeled for checking against the recipe.

@@ -82,7 +82,7 @@
   };
   const utilityIcon = n => L.h`<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">${paths[n] || paths.compass}</svg>`;
   const icon=n=>window.GAME_ASSETS.categories?.[n]?gameIcon(window.GAME_ASSETS.categories[n]):utilityIcon(n);
-  const nav = [['overview', 'Översikt', 'compass'], ['talents', 'Talents & builds', 'zap'], ['quests', 'Quests', 'scroll'], ['dungeons', 'Dungeons', 'dungeon'], ['zones', 'Levelingzoner', 'map'], ['zone-guide', 'Min zon', 'pin'], ['abilities', 'Abilities & träning', 'sparkles'], ['gear', 'Utrustning', 'shield'], ['professions', 'Professions', 'pickaxe'], ['notes', 'Mina anteckningar', 'note'], ['glossary', 'Nybörjarguiden', 'book'], ['controller', 'Handkontroll', 'gamepad']];
+  const nav = [['overview', 'Översikt', 'compass'], ['talents', 'Talents & builds', 'zap'], ['quests', 'Quests', 'scroll'], ['dungeons', 'Dungeons', 'dungeon'], ['zones', 'Levelingzoner', 'map'], ['world-map', {en:'World map',sv:'Världskarta'}, 'map'], ['zone-guide', 'Min zon', 'pin'], ['abilities', 'Abilities & träning', 'sparkles'], ['gear', 'Utrustning', 'shield'], ['professions', 'Professions', 'pickaxe'], ['notes', 'Mina anteckningar', 'note'], ['glossary', 'Nybörjarguiden', 'book'], ['controller', 'Handkontroll', 'gamepad']];
   const categoryNames = {
     quests: 'Quests',
     dungeons: 'Dungeons',
@@ -112,6 +112,50 @@
     controllerQuery = '',
     controllerGroup = 'all',
     updateAvailable = false;
+  let calcEditing=false,touchTalent=null,lastTalentPointer='mouse',talentHold=null,heldTalentClick=false,holdOrigin=null;
+  function calculatorForm(){
+    dialog(bi('Create talent build','Skapa talentbuild'),`<form id="calculator-form"><label class="form-field"><span>${bi('Build name','Buildnamn')}</span><input name="name" maxlength="80" required value="${bi('My build','Min build')}"></label><p class="small">${bi('Plan up to 51 points. Your click order becomes the leveling plan from level 10.','Planera upp till 51 poäng. Klickordningen blir levelingplanen från level 10.')}</p></form>`,`<button class="secondary-button" data-action="close-dialog">${bi('Cancel','Avbryt')}</button><button class="primary-button" type="submit" form="calculator-form">${bi('Create build','Skapa build')}</button>`);
+  }
+  function calculatorControls(b){
+    return `<section class="calculator-controls info-card"><div class="section-top"><h2>${bi('Talent calculator','Talentkalkylator')}</h2><span>${window.TalentEditor.total(b)} / 51 ${bi('points','poäng')}</span></div><p>${bi('Desktop: hover for effects, click to add, right-click to remove. Mobile: first tap shows effects, tap the selected talent again to add, hold it to remove.','Dator: håll musen över för effekter, klicka för att lägga till, högerklicka för att ta bort. Mobil: första trycket visar effekter, tryck igen på vald talent för att lägga till, håll inne för att ta bort.')}</p><p class="small">${bi('All planned ranks are shown while editing. Choices save automatically in the order you add them; removing a point is blocked if later choices depend on it.','Alla planerade ranks visas vid redigering. Valen sparas automatiskt i den ordning du lägger till dem; en poäng kan inte tas bort om senare val är beroende av den.')}</p><div class="calculator-buttons"><button class="secondary-button" data-action="undo-talent" ${b.order.length?'':'disabled'}>${bi('Undo last point','Ångra senaste poängen')}</button><button class="primary-button" data-action="finish-talents">${bi('Finish editing','Klar med redigering')}</button></div><p id="calculator-feedback" role="status" aria-live="polite"></p></section>`;
+  }
+  function calculatorFeedback(error){const messages={budget:bi('The plan already uses all 51 points.','Planen använder redan alla 51 poäng.'),max:bi('This talent is already at its maximum rank.','Talangen har redan maxrank.'),tier:bi('Spend more points in earlier rows of this tree first.','Lägg fler poäng i tidigare rader i detta träd först.'),prerequisite:bi('Complete the prerequisite talent first.','Fyll förkravstalangen först.'),level:bi('This talent requires a later level in the plan.','Talangen kräver en senare level i planen.'),dependent:bi('Later choices depend on this point. Remove those choices first.','Senare val är beroende av denna poäng. Ta bort de valen först.'),empty:bi('There are no points to remove here.','Det finns inga poäng att ta bort här.')};const el=$('#calculator-feedback');if(el)el.textContent=messages[error]||'';if(error)notify(messages[error]||bi('The point could not be changed.','Poängen kunde inte ändras.'));}
+  function changeTalent(key,remove=false){
+    const b=activeBuild();if(!calcEditing||!b?.calculator)return;
+    const [tree,index]=key.split(':').map(Number),result=window.TalentEditor[remove?'remove':'add'](b,DB,tree,index);
+    if(!result.ok){calculatorFeedback(result.error);return;}
+    save();const y=window.scrollY;renderContent();window.scrollTo({top:y,behavior:'instant'});
+    const node=document.querySelector(`[data-tooltip="${key}"]`);if(node)showTalentTooltip(node);
+  }
+  function releaseAction(target,e){
+    const a=target.dataset.action,c=character(),b=activeBuild();
+    if(a==='create-build'){calculatorForm();return true;}
+    if(a==='edit-talents'){
+      if(!b)return true;
+      if(b.calculator){calcEditing=true;touchTalent=null;renderContent();return true;}
+      if(c.builds.length>=30){notify(bi('You can save up to 30 builds per character.','Du kan spara högst 30 builds per karaktär.'));return true;}
+      const order=window.TalentEditor.plan(b,DB);if(!order){notify(bi('This allocation cannot form a valid leveling plan. Create a new build instead.','Denna fördelning kan inte bilda en giltig levelingplan. Skapa en ny build.'));return true;}
+      const copy={...b,id:C.uuid(),name:(b.name+' · '+bi('copy','kopia')).slice(0,80),allocations:b.allocations.map(t=>[...t]),order,calculator:true,custom:true,url:'',source:''};
+      c.builds.push(copy);c.activeBuild=copy.id;calcEditing=true;touchTalent=null;save();renderContent();notify(bi('Editing a saved copy. The original build is kept.','Redigerar en sparad kopia. Originalbuilden finns kvar.'));return true;
+    }
+    if(a==='finish-talents'){calcEditing=false;touchTalent=null;hideTalentTooltip();renderContent();return true;}
+    if(a==='undo-talent'){const last=b?.order.at(-1);if(last)changeTalent(last.tree+':'+last.index,true);return true;}
+    return false;
+  }
+
+  function craftTasks(){
+    const c=character(),P=window.ProfessionPlanner;
+    return P.suggestions(c,activeBuild(),DB).map(g=>{
+      const missingSkill=g.skill&&!(c.professionSkills?.[g.profession]>=g.skill),laterLevel=g.equipLevel&&g.equipLevel>c.level;
+      return {...g,category:'professions',title:g.name,level:g.equipLevel||g.guideLevel,craft:true,missingSkill,laterLevel};
+    }).filter(g=>c.filters.view==='all'||(c.filters.view==='soon'?(g.laterLevel&&g.level<=c.level+10)||g.missingSkill:!g.laterLevel&&!g.missingSkill));
+  }
+  function craftTaskCard(g){
+    const c=character(),done=!!c.done[g.id];
+    return `<article class="quest-card craft-task ${done?'done':''}"><div class="quest-head"><input class="quest-check" type="checkbox" data-check="${esc(g.id)}" aria-label="${bi('Mark as completed','Markera som klar')}: ${esc(g.name)}" ${done?'checked':''}><div class="quest-copy"><div class="card-meta"><span class="level-tag">${bi('CRAFT','CRAFT')}</span><span>${esc(g.profession)} · ${esc(g.spec)}</span>${g.equipLevel?`<span>${bi('Equip level','Användningslevel')} ${g.equipLevel}</span>`:''}</div><h3>${esc(g.name)}</h3><p>${esc(L.t(g.reason))}</p><div class="craft-state">${g.skill?`${bi('Recipe skill','Receptskill')}: ${g.skill} · ${g.missingSkill?bi('Train your profession first','Höj din professionskill först'):bi('Your skill is sufficient','Din skill räcker')}`:bi('Check the recipe’s required skill before crafting.','Kontrollera receptets skillkrav före crafting.')}<small>${bi('Compare stats, recipe access, binding and cost. Mark complete once you have crafted or considered this item.','Jämför stats, recept, bindning och kostnad. Markera klar när du craftat eller bedömt föremålet.')}</small></div><button class="text-button" data-page="professions">${bi('Profession details','Professionsdetaljer')} ${utilityIcon('arrow')}</button>${sourceLine(g)}</div>${gameIcon(window.GAME_ASSETS.professions[g.profession])}</div></article>`;
+  }
+
+  function worldMapPage(){const c=character();return window.WorldAtlas.render({data:window.WORLD_MAP_DATA,language:L.language,initial:c.atlasMap||'world',currentZone:c.currentZone});}
   function builtIn() {
     const definitions = [[1, 'Thundering Strikes', 5], [1, 'Improved Ghost Wolf', 2], [2, 'Improved Healing Wave', 5], [2, 'Totemic Focus', 5], [2, 'Water Shield', 1], [1, 'Ancestral Knowledge', 5], [1, 'Shamanistic Focus', 1], [1, 'Elemental Weapons', 2], [2, 'Mindfulness', 3], [2, 'Healing Focus', 1], [1, 'Stormstrike', 1], [2, 'Tidal Mastery', 5], [2, 'Mana Tide Totem', 1], [2, 'Healing Way', 3], [2, 'Nature\'s Swiftness', 1], [2, 'Purification', 5], [2, 'Riptide', 1], [1, 'Toughness', 4]];
     const trees = DB.classes.shaman.trees,
@@ -219,9 +263,10 @@
   }
   function actionableItems() {
  const c=character();
- return [...D.quests,...D.misc].filter(q=>visible(q)&&inView(q)&&Q.available(q,c,D.quests,C.questDone)&&(c.filters.showDone||!C.questDone(q,c))).sort((a,b)=>a.level-b.level||a.title.localeCompare(b.title));
+ return [...D.quests,...D.misc,...craftTasks()].filter(q=>visible(q)&&(q.craft||inView(q))&&Q.available(q,c,D.quests,C.questDone)&&(c.filters.showDone||!C.questDone(q,c))).sort((a,b)=>a.level-b.level||a.title.localeCompare(b.title));
 }
   function questCard(q) {
+ if(q.craft)return craftTaskCard(q);
  const c=character(),done=C.questDone(q,c),partial=q.steps?.filter((_,i)=>c.done[q.id+':'+i]).length||0;
  return `<article class="quest-card ${done?'done':''}"><div class="quest-head"><input class="quest-check" type="checkbox" data-check="${esc(q.id)}" aria-label="${bi('Mark as completed','Markera som klar')}: ${esc(q.title)}" ${done?'checked':''}><div class="quest-copy"><div class="card-meta">${levelTag(q.level,done)}<span>${q.classId?esc(DB.classes[q.classId].name)+' · '+bi('Class quest','Klassquest'):esc(q.kind||L.t(categoryNames[q.category])||'Quest')}</span>${q.highValue?`<span class="reward-tag">${bi('Notable reward','Bra belöning')}</span>`:''}${q.group?`<span>${bi('Group','Grupp')}: ${esc(q.group)}</span>`:''}${partial&&!done?`<span>· ${partial}/${q.steps.length} ${bi('steps','steg')}</span>`:''}</div><h3>${esc(q.title)}</h3>${c.helpLevel>=2?`<p>${esc(q.desc||bi('Check this task when it becomes available.','Kontrollera uppgiften när den blir tillgänglig.'))}</p>`:''}${q.highValue&&q.reward?`<p class="quest-reward">${esc(q.reward)}</p>`:''}${q.status==='preliminary'?`<small class="content-caution">${esc(q.caution||bi('Preliminary: check the quest log for the current Forever requirements and reward.','Preliminärt: kontrollera aktuella Forever-krav och belöning i questloggen.'))}</small>`:''}${rewardPreview(q)}</div><span class="quest-icon">${q.classId?gameIcon(window.GAME_ASSETS.classes[q.classId]):icon(categoryIcons[q.category]||'scroll')}</span></div><details class="quest-details" ${c.helpLevel>=3?'open':''}><summary>${bi('Show steps and location','Visa steg och plats')}</summary><div class="details-inner">${q.location||q.reward?`<dl>${q.location?`<dt>${bi('Start / location','Start / plats')}</dt><dd>${esc(q.location)} ${q.coords?coordinate(q.coords):''}</dd>`:''}${q.reward&&!q.highValue?`<dt>${bi('Reward','Belöning')}</dt><dd>${esc(q.reward)}</dd>`:''}${q.minLevel?`<dt>${bi('Minimum level','Lägsta level')}</dt><dd>${q.minLevel}</dd>`:''}</dl>`:''}${q.audience?`<p>${bi('Useful for','Passar för')}: ${esc(q.audience)}</p>`:''}${q.prereq?`<p>${bi('Prerequisites','Förkrav')}: ${esc(q.prereq)}</p>`:''}${q.category==='abilities'?`<p>${bi('First training level from the Forever calculator. A class quest or another unlock may also be required.','Första träningsnivå enligt Forever-kalkylatorn. En klassquest eller annan upplåsning kan också krävas.')}</p>`:''}${q.steps?.length?`<div class="step-list">${q.steps.map((s,i)=>`<label class="step-row ${c.done[q.id+':'+i]?'completed':''}"><input type="checkbox" data-step="${esc(q.id)}" data-index="${i}" ${c.done[q.id+':'+i]?'checked':''}><span>${esc(s)}</span></label>`).join('')}</div>`:''}${sourceLine(q)}</div></details></article>`;
 }
@@ -249,7 +294,7 @@
   }
   function heading() {
  const c=character(),n=nav.find(n=>n[0]===page)||nav[0];
- $('#page-heading').innerHTML=`<div class="heading-row"><button class="icon-button mobile-menu" data-action="menu" aria-label="${bi('Open menu','Öppna menyn')}">${utilityIcon('menu')}</button><button class="icon-button" id="back-button" data-action="back" aria-label="${bi('Back','Tillbaka')}" ${navTrail.length?'':'disabled'}>${utilityIcon('back')}</button><h1>${c.blank?bi('Create your character','Skapa din karaktär'):esc(L.t(n[1]))}</h1><button class="draft-badge" data-action="about">0.4.0</button></div>`;
+ $('#page-heading').innerHTML=`<div class="heading-row"><button class="icon-button mobile-menu" data-action="menu" aria-label="${bi('Open menu','Öppna menyn')}">${utilityIcon('menu')}</button><button class="icon-button" id="back-button" data-action="back" aria-label="${bi('Back','Tillbaka')}" ${navTrail.length?'':'disabled'}>${utilityIcon('back')}</button><h1>${c.blank&&page!=='world-map'?bi('Create your character','Skapa din karaktär'):esc(L.t(n[1]))}</h1><button class="draft-badge" data-action="about">0.5.0</button></div>`;
 }
   function renderShell() {
     applyPreferences();
@@ -284,21 +329,23 @@
       tasks = actionableItems(),
       all = c.filters.view === 'all' || c.filters.showDone,
       limit = all || c.helpLevel === 4 ? Infinity : c.helpLevel === 1 ? 3 : c.helpLevel === 2 ? 6 : 12,
-      zones = recommendedZones().slice(0, 2);
-    return hero() + sessionPanel() + summary() + zoneOverview() + `<section><div class="section-top"><h2>${icon('scroll')} ${bi('To do now', 'Att göra nu')}</h2><button class="text-button" data-page="quests">${bi('All quests', 'Alla quests')} ${icon('arrow')}</button></div>${tabs()}<div class="quest-list">${tasks.length ? tasks.slice(0, limit).map(questCard).join('') : empty()}</div>${tasks.length > limit ? `<button class="text-button" data-page="quests">${bi('See more tasks', 'Se fler uppgifter')} ${icon('arrow')}</button>` : ''}</section>${!c.currentZone && c.filters.categories.includes('zones') ? `<section class="zone-section"><div class="section-top"><h2>${bi('Suggested zones', 'Föreslagna zoner')}</h2></div><div class="card-grid">${zones.map(z => zoneCard(z)).join('')}</div></section>` : ''}` + coverage();
+      zones = recommendedZones().slice(0, 2),
+      shown=all||c.helpLevel===4?tasks:[...tasks.filter(q=>!q.craft).slice(0,limit),...tasks.filter(q=>q.craft).sort((a,b)=>b.level-a.level).slice(0,3)].sort((a,b)=>a.level-b.level||a.title.localeCompare(b.title));
+    return hero() + sessionPanel() + summary() + zoneOverview() + `<section><div class="section-top"><h2>${icon('scroll')} ${bi('To do now', 'Att göra nu')}</h2><button class="text-button" data-page="quests">${bi('All quests', 'Alla quests')} ${icon('arrow')}</button></div>${tabs()}<div class="quest-list">${tasks.length ? shown.map(questCard).join('') : empty()}</div>${tasks.length > shown.length ? `<button class="text-button" data-view="all">${bi('See more tasks', 'Se fler uppgifter')} ${icon('arrow')}</button>` : ''}</section>${!c.currentZone && c.filters.categories.includes('zones') ? `<section class="zone-section"><div class="section-top"><h2>${bi('Suggested zones', 'Föreslagna zoner')}</h2></div><div class="card-grid">${zones.map(z => zoneCard(z)).join('')}</div></section>` : ''}` + coverage();
   }
   function talents() {
     const c = character(),
       b = activeBuild();
-    let html = `<div class="build-toolbar"><select id="active-build" aria-label="${bi('Active build', 'Aktiv build')}">${!c.builds.length ? `<option value="">${bi('No saved build', 'Ingen build sparad')}</option>` : c.builds.map(b => `<option value="${esc(b.id)}" ${b.id === c.activeBuild ? 'selected' : ''}>${esc(b.name)}</option>`).join('')}</select><button class="primary-button" data-action="import-build">${icon('plus')} ${bi('Import from Wowhead', 'Importera från Wowhead')}</button>${b ? `<button class="secondary-button" data-action="edit-build">${bi('Rename build', 'Byt namn på build')}</button><button class="danger-button" data-action="request-delete-build">${bi('Delete build', 'Ta bort build')}</button>` : ''}${c.classId === 'shaman' && !c.builds.some(b => b.id === 'wavebreaker-early-wolf-v1') ? `<button class="secondary-button" data-action="add-wavebreaker">${bi('Use Wavebreaker', 'Välj Wavebreaker')}</button>` : ''}</div>`;
-    if (!b) return html + `<section class="info-card"><h2>${bi('Import your talent build', 'Importera din talentbuild')}</h2><p>${bi('Include a saved point order in the Wowhead link to see talent choices for each level.', 'Ta med en sparad poängordning i Wowhead-länken för att se talentval för varje level.')}</p><a href="https://www.wowhead.com/forever/talent-calc/${c.classId}" target="_blank" rel="noopener noreferrer">${bi('Open calculator', 'Öppna kalkylatorn')} ${icon('external')}</a></section>`;
+    let html = `<div class="build-toolbar"><select id="active-build" aria-label="${bi('Active build', 'Aktiv build')}">${!c.builds.length ? `<option value="">${bi('No saved build', 'Ingen build sparad')}</option>` : c.builds.map(b => `<option value="${esc(b.id)}" ${b.id === c.activeBuild ? 'selected' : ''}>${esc(b.name)}</option>`).join('')}</select><button class="primary-button" data-action="import-build">${utilityIcon('plus')} <span>${bi('Import from Wowhead', 'Importera från Wowhead')}</span></button><button class="primary-button" data-action="create-build">${bi('Create build','Skapa build')}</button>${b ? `<button class="secondary-button" data-action="edit-talents">${b.calculator?bi('Edit talents','Redigera talents'):bi('Edit a copy','Redigera en kopia')}</button><button class="secondary-button" data-action="edit-build">${bi('Rename build', 'Byt namn på build')}</button><button class="danger-button" data-action="request-delete-build">${bi('Delete build', 'Ta bort build')}</button>` : ''}${c.classId === 'shaman' && !c.builds.some(b => b.id === 'wavebreaker-early-wolf-v1') ? `<button class="secondary-button" data-action="add-wavebreaker">${bi('Use Wavebreaker', 'Välj Wavebreaker')}</button>` : ''}</div>`;
+    if (!b) return html + `<section class="info-card"><h2>${bi('Create or import a talent build','Skapa eller importera en talentbuild')}</h2><p>${bi('Create a build here to record every talent choice, or import a Wowhead link with a saved point order.','Skapa en build här för att spara varje talentval, eller importera en Wowhead-länk med sparad poängordning.')}</p><a href="https://www.wowhead.com/forever/talent-calc/${c.classId}" target="_blank" rel="noopener noreferrer">${bi('Open calculator', 'Öppna kalkylatorn')} ${icon('external')}</a></section>`;
     const steps = C.buildSteps(b, DB),
       now = steps.find(s => s.level === c.level),
       next = steps.find(s => s.level > c.level),
       warnings = C.validateOrder(b, DB);
     html += `<section class="info-card"><h2>${esc(b.name)}</h2><div class="talent-summary">${klass().trees.map((t, i) => `<div class="tree-total"><strong>${b.allocations[i].reduce((a, b) => a + b, 0)}</strong><small>${esc(t.name)}</small></div>`).join('')}</div>${b.url ? `<a class="secondary-button" href="${esc(b.url)}" target="_blank" rel="noopener noreferrer">${bi('Open in Wowhead', 'Öppna i Wowhead')} ${icon('external')}</a>` : ''}</section><div class="summary-grid talent-point-pair">${talentPointCard(bi('Talent at this level', 'Talent för denna level'), now, b)}${talentPointCard(bi('Next talent point', 'Nästa talentpoäng'), next, b)}</div>`;
     if (warnings.length) html += `<p class="talent-warning">${bi('Check the imported order:', 'Kontrollera den importerade ordningen:')} ${esc(L.m(warnings[0].message))}</p>`;
-    if (!steps.length) html += `<p class="coverage-note">${bi('This link contains an allocation but no leveling order. Import a Wowhead share link with a saved order for level-by-level choices.', 'Länken innehåller en poängfördelning men ingen levelingordning. Importera en Wowhead-länk med sparad ordning för val vid varje level.')}</p>`;
+    if (!steps.length&&!b.calculator) html += `<p class="coverage-note">${bi('This link contains an allocation but no leveling order. Import a Wowhead share link with a saved order for level-by-level choices.', 'Länken innehåller en poängfördelning men ingen levelingordning. Importera en Wowhead-länk med sparad ordning för val vid varje level.')}</p>`;
+    if(calcEditing&&b.calculator)html+=calculatorControls(b);
     html += talentTrees(b);
     if (steps.length) html += `<section class="zone-section"><h2>${bi('Leveling plan', 'Levelingplan')}</h2><div class="talent-table">${steps.map(s => `<button class="talent-table-row ${s.level === c.level ? 'current' : ''}" data-talent="${s.tree}:${s.index}"><span>LV ${s.level}</span><div class="talent-table-name">${gameIcon(window.GAME_ASSETS.talents[s.id])}<span>${esc(s.name)} <span class="talent-rank">${s.rank}/${s.max}</span></span></div><span class="talent-tree-label">${positionLabel(s)}</span></button>`).join('')}</div></section>`;
     return html;
@@ -367,17 +414,18 @@
   }
   function renderContent() {
     const c = character();
-    if (c.blank) {
+    if (c.blank && page!=='world-map') {
       $('#content').innerHTML = welcome();
       return;
     }
     $('#search-options').hidden = !query;
     let html;
-    if (query) html = searchPage();else if (page === 'overview') html = overview();else if (page === 'zone-guide') html = zoneGuide();else if (page === 'controller') html = controllerPage();else if (C.CATEGORIES.includes(page) && !c.filters.categories.includes(page)) html = L.h`<div class="empty-state">${icon('sliders')}<h3>Kategorin är dold</h3><p>Du har dolt ${L.t(categoryNames[page]).toLowerCase()} för den här karaktären.</p><button class="secondary-button" data-action="filters">Ändra kategorier</button></div>`;else if (page === 'talents') html = talents();else if (page === 'quests') html = questsPage();else if (page === 'dungeons') html = dungeonsPage();else if (page === 'zones') html = zonesPage();else if (page === 'abilities') html = abilitiesPage();else if (page === 'gear') html = gearPage();else if (page === 'professions') html = professionsPage();else if (page === 'glossary') html = glossaryPage();else if (page === 'notes') html = L.h`<section class="info-card"><h2>Till nästa gång</h2><p style="margin-top:10px">Skriv ned nästa quest, var du parkerade karaktären eller vad du vill göra med gruppen.</p><label class="form-field"><span>Anteckningar för ${esc(c.name)}</span><textarea id="character-notes" class="notes-area" placeholder="Nästa gång ska jag…">${esc(c.notes)}</textarea></label><span class="note-footer">Sparas automatiskt för den här karaktären.</span></section>`;else {
+    if (query) html = searchPage();else if (page === 'overview') html = overview();else if (page === 'world-map') html = worldMapPage();else if (page === 'zone-guide') html = zoneGuide();else if (page === 'controller') html = controllerPage();else if (C.CATEGORIES.includes(page) && !c.filters.categories.includes(page)) html = L.h`<div class="empty-state">${icon('sliders')}<h3>Kategorin är dold</h3><p>Du har dolt ${L.t(categoryNames[page]).toLowerCase()} för den här karaktären.</p><button class="secondary-button" data-action="filters">Ändra kategorier</button></div>`;else if (page === 'talents') html = talents();else if (page === 'quests') html = questsPage();else if (page === 'dungeons') html = dungeonsPage();else if (page === 'zones') html = zonesPage();else if (page === 'abilities') html = abilitiesPage();else if (page === 'gear') html = gearPage();else if (page === 'professions') html = professionsPage();else if (page === 'glossary') html = glossaryPage();else if (page === 'notes') html = L.h`<section class="info-card"><h2>Till nästa gång</h2><p style="margin-top:10px">Skriv ned nästa quest, var du parkerade karaktären eller vad du vill göra med gruppen.</p><label class="form-field"><span>Anteckningar för ${esc(c.name)}</span><textarea id="character-notes" class="notes-area" placeholder="Nästa gång ska jag…">${esc(c.notes)}</textarea></label><span class="note-footer">Sparas automatiskt för den här karaktären.</span></section>`;else {
       page = 'overview';
       html = overview();
     }
     $('#content').innerHTML = html;
+    if(!query&&page==='world-map'&&document.querySelector('.atlas')?.querySelector)window.WorldAtlas.mount(document.querySelector('.atlas'),{data:window.WORLD_MAP_DATA,language:L.language,initial:c.atlasMap||'world',showSources:state.settings.showSourceLinks,onView:id=>{c.atlasMap=id;save();},onChoose:id=>{const z=D.zones.find(z=>z.id===id);if(!z)return;c.currentZone=id;c.currentPlace=z.title;save();go('overview');}});
   }
   function go(id, back = false) {
     const nextPage = nav.some(n => n[0] === id) ? id : 'overview';
@@ -385,6 +433,7 @@
       page,
       query
     });
+    if(nextPage!=='talents'){calcEditing=false;touchTalent=null;hideTalentTooltip();}
     page = nextPage;
     query = '';
     $('#search').value = '';
@@ -483,6 +532,12 @@
       go(page === 'overview' ? 'overview' : 'zone-guide');
       return;
     }
+    if (target.dataset.talent && target.classList.contains('talent-node') && calcEditing && activeBuild()?.calculator) {
+      if(heldTalentClick){heldTalentClick=false;return;}
+      const key=target.dataset.talent;
+      if(lastTalentPointer==='touch'&&touchTalent!==key){touchTalent=key;showTalentTooltip(target);return;}
+      changeTalent(key);return;
+    }
     if (target.dataset.talent) {
       const [tree, index] = target.dataset.talent.split(':').map(Number),
         tal = klass().trees[tree]?.talents[index];
@@ -500,7 +555,7 @@
       return;
     }
     if (target.dataset.character) {
-      state.activeId = target.dataset.character;
+      state.activeId = target.dataset.character;calcEditing=false;touchTalent=null;hideTalentTooltip();
       save();
       $('#dialog').close();
       renderShell();
@@ -528,6 +583,7 @@
     }
     const a = target.dataset.action,
       c = character();
+    if(releaseAction(target,e))return;
     if (a === 'choose-zone') {
       zoneDialog();
       return;
@@ -573,7 +629,7 @@
       const b = activeBuild();
       dialog(L.t('Redigera build'), L.h`<form id="build-edit-form"><label class="form-field"><span>Namn</span><input name="name" maxlength="80" value="${esc(b.name)}" required></label></form><button class="danger-button" style="margin-top:20px" data-action="delete-build">Ta bort denna build</button>`, L.h`<button class="secondary-button" data-action="close-dialog">Avbryt</button><button class="primary-button" type="submit" form="build-edit-form">Spara</button>`);
     } else if (a === 'delete-build') {
-      const id = c.activeBuild;
+      const id = c.activeBuild;calcEditing=false;touchTalent=null;hideTalentTooltip();
       c.builds = c.builds.filter(b => b.id !== id);
       c.activeBuild = c.builds[0]?.id || null;
       save();
@@ -747,7 +803,7 @@
   }
   function talentPointCard(label, s, b) {
     const c = character();
-    return `<button class="summary-card talent-point-card" data-page="talents"><span class="summary-title">${icon('zap')} ${label}</span><div class="point-card-main">${s ? gameIcon(window.GAME_ASSETS.talents[s.id]) : icon('zap')}<strong>${s ? esc(s.name) : b ? b.order.length ? bi('No point scheduled', 'Ingen poäng planerad') : bi('No point order imported', 'Ingen poängordning importerad') : bi('Choose a build', 'Välj en build')}</strong></div><small>${s ? 'Level ' + s.level + ' · ' + s.rank + '/' + s.max : bi('Open Talents & Builds', 'Öppna Talents & Builds')}</small><small class="talent-position">${s ? positionLabel(s) : '&nbsp;'}</small></button>`;
+    return `<button class="summary-card talent-point-card" data-page="talents"><span class="summary-title">${icon('zap')} ${label}</span><div class="point-card-main">${s ? gameIcon(window.GAME_ASSETS.talents[s.id]) : icon('zap')}<strong>${s ? esc(s.name) : b ? b.order.length ? bi('No point scheduled', 'Ingen poäng planerad') : b.calculator?bi('Choose your first talent','Välj din första talent'):bi('No point order imported', 'Ingen poängordning importerad') : bi('Choose a build', 'Välj en build')}</strong></div><small>${s ? 'Level ' + s.level + ' · ' + s.rank + '/' + s.max : bi('Open Talents & Builds', 'Öppna Talents & Builds')}</small><small class="talent-position">${s ? positionLabel(s) : '&nbsp;'}</small></button>`;
   }
   function zoneOverview() {
     const c = character(),
@@ -760,7 +816,7 @@
   }
   function talentTrees(b) {
  const c=character(),steps=C.buildSteps(b,DB),spent=talentRanks(),now=steps.find(s=>s.level===c.level),next=steps.find(s=>s.level>c.level);
- return `<section class="talent-tree-section"><h2>${bi('Talent trees','Talentträd')}</h2><p class="small">${bi('Ranks show your plan through the current level. Hover or focus for effects; tap to open details.','Ranks visar planen till nuvarande level. Håll musen över eller fokusera för effekttext; tryck för detaljer.')}</p><div class="tree-legend"><span class="current-marker">${bi('This level','Denna level')}</span><span class="next-marker">${bi('Next point','Nästa poäng')}</span></div><div class="talent-trees">${klass().trees.map((t,tree)=>{
+ return `<section class="talent-tree-section"><h2>${bi('Talent trees','Talentträd')}</h2><p class="small">${calcEditing?bi('Editing the full plan · changes are saved automatically.','Redigerar hela planen · ändringar sparas automatiskt.'):!b.order.length?bi('Full allocation shown; no leveling order is available.','Hela fördelningen visas; ingen levelingordning finns.'):bi('Ranks show your plan through the current level. Hover or focus for effects; tap to open details.','Ranks visar planen till nuvarande level. Håll musen över eller fokusera för effekttext; tryck för detaljer.')}</p><div class="tree-legend"><span class="current-marker">${bi('This level','Denna level')}</span><span class="next-marker">${bi('Next point','Nästa poäng')}</span></div><div class="talent-trees">${klass().trees.map((t,tree)=>{
  const rows=Math.max(...t.talents.map(x=>x.row))+1,w=280,h=rows*64+20;
  const arrows=t.talents.flatMap(tal=>tal.requires.map(r=>{
   const from=t.talents.find(x=>x.id===r.id);if(!from)return '';
@@ -818,6 +874,7 @@ function rewardPreview(q) {
 }
 function talentRanks() {
  const b=activeBuild(),spent=klass().trees.map(t=>t.talents.map(()=>0));
+ if(b&&(calcEditing||!b.order.length))return b.allocations.map(t=>[...t]);
  if(b)C.buildSteps(b,DB).filter(s=>s.level<=character().level).forEach(s=>spent[s.tree][s.index]++);
  return spent;
 }
@@ -829,10 +886,11 @@ function talentInfo(tree,index) {
 function hideTalentTooltip(){document.querySelectorAll('[aria-describedby="talent-tooltip"]').forEach(x=>x.removeAttribute('aria-describedby'));const el=$('#talent-tooltip');if(el){el.hidden=true;el.removeAttribute('data-owner');}}
 function showTalentTooltip(target){
  const key=target.dataset.tooltip;if(!key)return;const [tree,index]=key.split(':').map(Number),el=$('#talent-tooltip');if(!el)return;
+ document.querySelectorAll('.touch-selected').forEach(n=>n.classList.remove('touch-selected'));if(lastTalentPointer==='touch'&&calcEditing)target.classList.add('touch-selected');
  target.setAttribute('aria-describedby','talent-tooltip');el.innerHTML=talentInfo(tree,index);el.hidden=false;el.dataset.owner=key;
- const rect=target.getBoundingClientRect(),box=el.getBoundingClientRect();
- el.style.left=Math.max(8,Math.min(rect.right+12,window.innerWidth-box.width-8))+'px';
- el.style.top=Math.max(8,Math.min(rect.top,window.innerHeight-box.height-8))+'px';
+ el.style.maxHeight='calc(100dvh - 16px)';
+ const p=window.TalentEditor.tooltip(target.getBoundingClientRect(),el.getBoundingClientRect(),{width:window.innerWidth,height:window.innerHeight});
+ el.style.left=p.left+'px';el.style.top=p.top+'px';el.style.maxHeight=p.maxHeight+'px';
 }
 function professionMaterials(name) {
  const P=window.ProfessionPlanner,c=character(),skill=c.professionSkills?.[name],rows=P.shopping(name,skill);
@@ -925,7 +983,7 @@ function professionGear(){
       return;
     }
     if (el.dataset.check) {
-      const item = byId.get(el.dataset.check) || {
+      const item = byId.get(el.dataset.check) || craftTasks().find(g=>g.id===el.dataset.check) || {
         id: el.dataset.check
       };
       C.setDone(c, item, el.checked);
@@ -964,7 +1022,7 @@ function professionGear(){
       return;
     }
     if (el.id === 'active-build') {
-      c.activeBuild = el.value;
+      c.activeBuild = el.value;calcEditing=false;touchTalent=null;hideTalentTooltip();
       save();
       renderContent();
       return;
@@ -1019,6 +1077,11 @@ function professionGear(){
     renderContent();
   });
   document.addEventListener('submit', e => {
+    if(e.target.id==='calculator-form'){
+      e.preventDefault();const c=character(),name=new FormData(e.target).get('name').trim().slice(0,80);if(!name)return;
+      if(c.builds.length>=30){notify(bi('You can save up to 30 builds per character.','Du kan spara högst 30 builds per karaktär.'));return;}
+      const b={id:C.uuid(),name,classId:c.classId,allocations:window.TalentEditor.empty(c.classId,DB),order:[],startLevel:10,calculator:true,custom:true,url:''};c.builds.push(b);c.activeBuild=b.id;calcEditing=true;touchTalent=null;save();$('#dialog').close();go('talents');return;
+    }
     if (e.target.id === 'character-form') {
       e.preventDefault();
       const form = e.target,
@@ -1181,12 +1244,20 @@ function professionGear(){
     });
   }
   document.addEventListener('pointerover',e=>{const target=e.target.closest?.('[data-tooltip]');if(target&&e.pointerType!=='touch')showTalentTooltip(target);});
-  document.addEventListener('pointerout',e=>{if(e.target.closest?.('[data-tooltip]'))hideTalentTooltip();});
+  document.addEventListener('pointerout',e=>{if(e.pointerType!=='touch'&&e.target.closest?.('[data-tooltip]'))hideTalentTooltip();});
   document.addEventListener('focusin',e=>{const target=e.target.closest?.('[data-tooltip]');if(target)showTalentTooltip(target);});
   document.addEventListener('focusout',hideTalentTooltip);
-  document.addEventListener('click',hideTalentTooltip);
+  document.addEventListener('click',e=>{if(!e.target.closest?.('[data-tooltip]')){touchTalent=null;hideTalentTooltip();}});
   document.addEventListener('keydown',e=>{if(e.key==='Escape')hideTalentTooltip();});
   window.addEventListener('scroll',hideTalentTooltip,true);window.addEventListener('resize',hideTalentTooltip);
+
+  document.addEventListener('contextmenu',e=>{const node=e.target.closest?.('.talent-node');if(!node||!calcEditing)return;e.preventDefault();if(lastTalentPointer!=='touch')changeTalent(node.dataset.talent,true);});
+  const cancelTalentHold=()=>{clearTimeout(talentHold);talentHold=null;holdOrigin=null;};
+  document.addEventListener('pointerdown',e=>{const node=e.target.closest?.('.talent-node');if(!node)return;lastTalentPointer=e.pointerType||'mouse';heldTalentClick=false;cancelTalentHold();if(e.pointerType==='touch'&&calcEditing&&touchTalent===node.dataset.talent){holdOrigin={x:e.clientX,y:e.clientY};const key=node.dataset.talent;talentHold=setTimeout(()=>{heldTalentClick=true;changeTalent(key,true);},550);}});
+  document.addEventListener('pointermove',e=>{if(holdOrigin&&Math.hypot(e.clientX-holdOrigin.x,e.clientY-holdOrigin.y)>8)cancelTalentHold();});
+  document.addEventListener('pointerup',cancelTalentHold);document.addEventListener('pointercancel',cancelTalentHold);
+  document.addEventListener('keydown',e=>{const node=e.target.closest?.('.talent-node');if(!node||!calcEditing)return;if(['Enter',' '].includes(e.key))lastTalentPointer='keyboard';if(['Delete','Backspace','-'].includes(e.key)){e.preventDefault();changeTalent(node.dataset.talent,true);}if(['+','='].includes(e.key)){e.preventDefault();changeTalent(node.dataset.talent);}});
+
   fillIcons();
   renderShell();
   offlineStatus();

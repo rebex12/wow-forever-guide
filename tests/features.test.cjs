@@ -58,17 +58,17 @@ test('controller entries have unique ids, bilingual help and a pinned client sou
 
 // A small DOM adapter exercises the real rendering functions and event wiring without a browser dependency.
 function app(){
-  const elements=new Map(),events={};
-  const element=s=>{if(!elements.has(s))elements.set(s,{innerHTML:'',textContent:'',value:'',hidden:false,dataset:{},classList:{toggle(){},add(){},remove(){}},setAttribute(){},addEventListener(){},focus(){},close(){this.open=false},showModal(){this.open=true}});return elements.get(s);};
-  const document={querySelector:element,querySelectorAll:()=>[],addEventListener:(n,f)=>events[n]=f,documentElement:{dataset:{}},body:{classList:{toggle(){}}}};
-  const window={addEventListener(){},scrollTo(){},isSecureContext:false};const storage=new Map();const context={window,document,location:{hash:'',protocol:'http:'},history:{replaceState(){},pushState(){}},navigator:{onLine:true},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},getComputedStyle:()=>({getPropertyValue:()=> '#000'}),URL,console,setTimeout:()=>1,clearTimeout(){}};
-  vm.createContext(context);for(const f of ['i18n.js','locales.js','catalog.js','content.js','core.js','guide-tools.js','zone-data.js','controller-data.js','character-rules.js','game-assets.js','quest-chains.js','release-content.js','talent-text.js','profession-planner.js'])vm.runInContext(file(f),context);
-  vm.runInContext(file('app.js').replace('  fillIcons();', '  window.testAPI={state,character,go,settings,renderShell,renderContent,searchPage,questCard,zoneCard,overview,controllerPage,actionableItems,summary,builtIn,talents,goBack,sourceLine,dungeonCard,zoneGuide,talentInfo,showTalentTooltip,hideTalentTooltip,professionsPage,professionMaterials,professionGear};\n  fillIcons();'),context);
-  return {api:window.testAPI,element,document,events,storage};
+  const elements=new Map(),events={},listeners={},timers=new Map();let timerId=0;
+  const element=s=>{if(!elements.has(s))elements.set(s,{innerHTML:'',textContent:'',value:'',hidden:false,dataset:{},style:{},getBoundingClientRect:()=>({width:300,height:240,left:8,right:308,top:8,bottom:248}),classList:{toggle(){},add(){},remove(){}},setAttribute(){},removeAttribute(){},addEventListener(){},focus(){},close(){this.open=false},showModal(){this.open=true}});return elements.get(s);};
+  const document={querySelector:element,querySelectorAll:()=>[],addEventListener:(n,f)=>{events[n]=f;(listeners[n]||=[]).push(f);},documentElement:{dataset:{}},body:{classList:{toggle(){}}}};
+  const window={addEventListener(){},scrollTo(){},isSecureContext:false,innerWidth:390,innerHeight:800,scrollY:0};const storage=new Map();const context={window,document,location:{hash:'',protocol:'http:'},history:{replaceState(){},pushState(){}},navigator:{onLine:true},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},getComputedStyle:()=>({getPropertyValue:()=> '#000'}),URL,console,setTimeout:(fn,ms)=>{const id=++timerId;timers.set(id,{fn,ms});return id;},clearTimeout:id=>timers.delete(id)};
+  vm.createContext(context);for(const f of ['i18n.js','locales.js','catalog.js','content.js','core.js','guide-tools.js','zone-data.js','controller-data.js','character-rules.js','game-assets.js','quest-chains.js','release-content.js','talent-text.js','profession-planner.js','talent-editor.js','map-data.js','world-map.js'])vm.runInContext(file(f),context);
+  vm.runInContext(file('app.js').replace('  fillIcons();', '  window.testAPI={state,character,go,settings,renderShell,renderContent,searchPage,questCard,zoneCard,overview,controllerPage,actionableItems,summary,builtIn,talents,goBack,sourceLine,dungeonCard,zoneGuide,talentInfo,showTalentTooltip,hideTalentTooltip,professionsPage,professionMaterials,professionGear,craftTasks,craftTaskCard,worldMapPage,releaseAction};\n  fillIcons();'),context);
+  return {api:window.testAPI,element,document,events,storage,listeners,timers};
 }
 test('every page renders in both languages and preserves user-written notes',()=>{
   const a=app(),c=a.api.character();Object.assign(c,C.createCharacter({name:'Spara',level:20}));c.name='Spara';c.blank=false;c.notes='Spara och Visa <script>alert(1)</script>';
-  for(const lang of ['en','sv']){a.api.state.settings.language=lang;for(const page of ['overview','talents','quests','dungeons','zones','zone-guide','abilities','gear','professions','notes','glossary','controller']){a.api.go(page);assert(a.element('#content').innerHTML.length>20,page);assert(!a.element('#content').innerHTML.includes('[object Object]'),page);assert(!a.element('#content').innerHTML.includes('undefined'),page);}a.api.go('notes');assert(a.element('#content').innerHTML.includes('Spara och Visa &lt;script&gt;alert(1)&lt;/script&gt;'));assert.equal(a.document.documentElement.lang,lang);}
+  for(const lang of ['en','sv']){a.api.state.settings.language=lang;for(const page of ['overview','talents','quests','dungeons','zones','zone-guide','world-map','abilities','gear','professions','notes','glossary','controller']){a.api.go(page);assert(a.element('#content').innerHTML.length>20,page);assert(!a.element('#content').innerHTML.includes('[object Object]'),page);assert(!a.element('#content').innerHTML.includes('undefined'),page);}a.api.go('notes');assert(a.element('#content').innerHTML.includes('Spara och Visa &lt;script&gt;alert(1)&lt;/script&gt;'));assert.equal(a.document.documentElement.lang,lang);}
 });
 test('detailed assistance expands quest steps and highest assistance survives compact mode',()=>{
   const a=app(),c=a.api.character();Object.assign(c,C.createCharacter({level:20}));c.blank=false;c.helpLevel=4;c.compact=true;c.filters.view='all';const card=a.api.questCard({id:'test',title:'Test',category:'quests',level:1,steps:['One','Two']});assert.match(card,/<details[^>]+open/);
@@ -179,4 +179,27 @@ test('editing a profession skill updates the real view and saved profile immedia
  const a=app(),c=a.api.character();Object.assign(c,C.createCharacter({name:'Test',professions:['Cooking'],professionSkills:{Cooking:1}}),{blank:false});a.api.go('professions');
  a.events.change({target:{dataset:{professionSkill:'Cooking'},value:'125',closest:()=>null,setCustomValidity(){}}});assert.equal(c.professionSkills.Cooking,125);assert(a.element('#content').innerHTML.includes('≈ 93'));const saved=JSON.parse(a.storage.get(C.KEY));assert.equal(saved.characters[0].professionSkills.Cooking,125);
  a.events.change({target:{dataset:{professionSkill:'Cooking'},value:'301',closest:()=>null,setCustomValidity(){},reportValidity(){}}});assert.equal(c.professionSkills.Cooking,125);
+});
+
+
+test('Overview crafts respect class, profession, equip level, skill, filters and saved completion',()=>{
+ const a=app(),c=a.api.character();Object.assign(c,C.createCharacter({name:'Test',classId:'shaman',role:'DPS',level:20,professions:['Leatherworking']}),{blank:false});
+ let tasks=a.api.craftTasks();assert(!tasks.some(g=>g.name==='Toughened Leather Gloves'));
+ c.filters.view='soon';assert(a.api.craftTasks().some(g=>g.name==='Toughened Leather Gloves'));
+ c.level=22;c.filters.view='now';tasks=a.api.craftTasks();const glove=tasks.find(g=>g.name==='Toughened Leather Gloves');assert(glove);assert(a.api.overview().includes('Toughened Leather Gloves')||a.api.actionableItems().some(g=>g.id===glove.id));
+ c.done[glove.id]=true;assert(!a.api.actionableItems().some(g=>g.id===glove.id));c.filters.showDone=true;assert(a.api.actionableItems().some(g=>g.id===glove.id));
+ c.filters.categories=c.filters.categories.filter(x=>x!=='professions');assert(!a.api.actionableItems().some(g=>g.craft));
+ Object.assign(c,C.createCharacter({classId:'mage',role:'DPS',level:30,professions:['Tailoring'],professionSkills:{Tailoring:100}}),{blank:false});assert(!a.api.craftTasks().some(g=>g.name==='Filigreed Pearly Circlet'));c.professionSkills.Tailoring=125;assert(a.api.craftTasks().some(g=>g.name==='Filigreed Pearly Circlet'));
+});
+
+
+test('touch calculator selects before adding and consumes the click after a long-press removal',async()=>{
+ const a=app(),c=a.api.character(),E=require('../talent-editor.js'),db=data().FOREVER_CATALOG;Object.assign(c,C.createCharacter({classId:'shaman',level:20}),{blank:false});
+ const b={id:'touch-test',classId:'shaman',name:'Touch',calculator:true,allocations:E.empty('shaman',db),order:[],startLevel:10};c.builds=[b];c.activeBuild=b.id;a.api.go('talents');a.api.releaseAction({dataset:{action:'edit-talents'}},{});
+ const node={dataset:{talent:'1:1',tooltip:'1:1'},classList:{contains:x=>x==='talent-node',add(){}},setAttribute(){},getBoundingClientRect:()=>({left:100,right:136,top:350,bottom:386}),closest:()=>node};
+ const event={target:node,pointerType:'touch',clientX:100,clientY:350};const emit=async(name,e=event)=>{for(const fn of a.listeners[name]||[])await fn(e);};
+ await emit('pointerdown');await emit('pointerup');await emit('click');assert.equal(E.total(b),0,'first tap only selects');assert.equal(a.element('#talent-tooltip').hidden,false);
+ await emit('pointerdown');await emit('pointerup');await emit('click');assert.equal(E.total(b),1,'second tap adds once');
+ await emit('pointerdown');const hold=[...a.timers.values()].find(t=>t.ms===550);assert(hold);hold.fn();await emit('pointerup');await emit('click');assert.equal(E.total(b),0,'long press removes without the release click adding it back');
+ await emit('pointerdown');await emit('pointermove',{...event,clientX:140});assert(![...a.timers.values()].some(t=>t.ms===550),'scroll movement cancels hold');
 });
