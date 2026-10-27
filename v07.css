@@ -7,3 +7,18 @@
 .journey-flight-mode{display:grid;gap:8px;margin:12px 0 18px;font-size:12px;color:var(--muted);max-width:400px}.journey-flight-mode select{width:100%}.route-alternative{border:1px solid var(--line);border-radius:10px;margin-top:14px;padding:14px}.route-alternative>summary{cursor:pointer;font-size:14px;font-weight:600;color:var(--accent);line-height:1.5}.route-alternative .journey-route{border-top:0;margin-top:10px;padding-top:6px}.flight-requirement{padding:12px;border:1px solid var(--line);background:var(--panel2);border-radius:8px;font-size:12px;line-height:1.8;overflow-wrap:anywhere}.flight-requirement.missing{border-color:color-mix(in srgb,var(--danger) 45%,var(--line))}.journey-step.flight .journey-number{background:var(--panel2);color:var(--accent)}
 .journey-saved,.flight-points{border-top:1px solid var(--line);margin-top:24px;padding-top:18px}.journey-saved h3{font-size:15px}.journey-saved .section-top{flex-wrap:wrap;gap:8px}.journey-favorites{display:flex;gap:8px;flex-wrap:wrap}.journey-favorites>div{display:flex;align-items:center;max-width:100%;border:1px solid var(--line);border-radius:8px}.journey-favorites .secondary-button{border:0;background:transparent;white-space:normal;text-align:left}.journey-history{margin-top:16px}.journey-history summary,.flight-points summary{cursor:pointer;font-size:13px;line-height:1.6}.journey-history>div{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid var(--line)}.journey-history .text-button{text-align:left;overflow-wrap:anywhere}.flight-points input[type=search]{width:100%;margin:12px 0}.flight-points #flight-choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:12px;max-height:340px;overflow:auto;padding:4px}.flight-choice{align-items:flex-start;font-size:12px;line-height:1.5}.flight-choice small{display:block;font-size:10px}.journey-planner select,.journey-planner input{min-width:0}.journey-error{overflow-wrap:anywhere}
 @media(max-width:600px){.companion-section{margin:18px 0}.inventory-row{grid-template-columns:minmax(0,1fr) 82px;gap:10px}.inventory-row input,.town-inner input,.town-inner select{font-size:16px}.inventory-row strong{font-size:13px}.town-add{flex-direction:column;align-items:stretch}.activity-choice{flex:1}.activity-choice select{flex:1;min-width:0}.route-alternative{padding:10px}.journey-route-heading h3{font-size:17px}.town-heading{flex-wrap:wrap}.goal-actions{flex-wrap:wrap}.journey-inner{padding:16px}.journey-step{gap:8px}.journey-step-copy h4{font-size:14px}.flight-points #flight-choices{grid-template-columns:1fr}}
+
+/* Overview checklist and reversible skipped tasks. */
+.overview-checklist{margin:0 0 26px}
+.task-filters{flex-wrap:wrap;align-items:center}
+.task-filters .view-tabs{flex-wrap:wrap;max-width:100%}
+.task-filters .view-tabs button{white-space:nowrap;min-height:42px}
+.task-filters .skipped-hint{margin:0;flex-basis:100%}
+.task-actions{display:flex;align-items:center;flex-wrap:wrap;gap:12px;padding:0 18px 14px}
+.task-actions .form-check{font-size:12px;gap:8px;min-height:40px}
+.task-actions .quest-check{margin:0}
+.task-actions .task-skip{margin-left:auto;min-height:40px;padding:8px 10px;font-size:12px}
+.task-status{font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:3px 7px}
+.quest-card.skipped{border-style:dashed}
+.quest-card.skipped h3{color:var(--muted)}
+@media(max-width:720px){.task-filters{gap:10px}.task-filters .view-tabs{width:100%}.task-filters .view-tabs button{flex:1;padding:8px 10px}.task-actions{padding-left:14px;padding-right:14px}.task-filters .activity-choice{margin-right:auto}}

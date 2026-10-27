@@ -31,6 +31,32 @@ test('duplicate profile ids are replaced and faction/race filters keep class que
 test('lowering level leaves all quest progress intact and checklist steps are reversible',()=>{
  const c=C.createCharacter({level:20}),q={id:'test',steps:['One','Two']};C.setDone(c,q,true);c.level=19;assert.equal(C.questDone(q,c),true);assert.equal(c.done['test:1'],true);C.setDone(c,q,false);assert.equal(C.questDone(q,c),false);assert.deepEqual(c.done,{});
 });
+test('skipping is separate from completion and preserves partial steps when restored',()=>{
+ const c=C.createCharacter(),q={id:'skip-test',steps:['One','Two']};
+ c.done['skip-test:0']=true;C.setSkipped(c,q,true);
+ assert(C.questSkipped(q,c));assert.equal(C.questDone(q,c),false);
+ assert.equal(c.done['skip-test:0'],true);
+ C.setSkipped(c,q,false);assert.equal(C.questSkipped(q,c),false);
+ assert.equal(C.questDone(q,c),false);assert.equal(c.done['skip-test:0'],true);
+ C.setDone(c,q,true);C.setSkipped(c,q,true);
+ assert.equal(C.questDone(q,c),false);assert.equal(c.done[q.id],undefined);
+ C.setDone(c,q,true);assert.equal(C.questSkipped(q,c),false);assert(C.questDone(q,c));
+});
+test('skipped prerequisites never unlock follow-up quests',()=>{
+ const Q=require('../quest-chains.js'),c=C.createCharacter(),first={id:'first',steps:['One','Two']},next={id:'next',requiresQuests:['first']};
+ C.setSkipped(c,first,true);assert.equal(Q.available(next,c,[first,next],C.questDone),false);
+ C.setDone(c,first,true);assert.equal(Q.available(next,c,[first,next],C.questDone),true);
+});
+test('backups retain per-character skips and the all-skipped view, including future tasks',()=>{
+ const c=C.createCharacter({level:1}),alt=C.createCharacter({name:'Alt'});
+ C.setSkipped(c,{id:'future-task'},true);c.filters.view='skipped';c.filters.categories=[];c.filters.activity='solo';
+ const out=C.normalise(JSON.parse(JSON.stringify({schema:1,activeId:c.id,characters:[c,alt]})),catalog);
+ assert.deepEqual(out.characters[0].skipped,{'future-task':true});assert.equal(out.characters[0].filters.view,'skipped');
+ assert.deepEqual(out.characters[1].skipped,{});assert.equal(out.characters[0].done['future-task'],undefined);
+ const legacy={...c};delete legacy.skipped;assert.deepEqual(C.normalise({schema:1,characters:[legacy]},catalog).characters[0].skipped,{});
+ c.skipped={'valid-task':true,'<invalid>':true,'not-skipped':false};
+ assert.deepEqual(C.normalise({schema:1,characters:[c]},catalog).characters[0].skipped,{'valid-task':true});
+});
 test('content ids are unique and every class has its own quest content',()=>{
  const contentContext={window:{}};vm.createContext(contentContext);vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'../content.js'),'utf8'),contentContext);const d=contentContext.window.GUIDE_CONTENT;
  const ids=[...d.quests,...d.misc,...d.dungeons,...d.zones,...d.professions,...d.glossary,...catalog.abilities,...d.dungeons.flatMap(x=>x.quests)].map(x=>x.id);assert.equal(new Set(ids).size,ids.length);

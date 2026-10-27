@@ -25,6 +25,7 @@
       professionSkills: normaliseProfessionSkills(values.professionSkills),
       professions: Array.isArray(values.professions) ? values.professions.slice(0, 5) : [],
       done: {},
+      skipped: {},
       notes: '',
       builds: [],
       activeBuild: null,
@@ -81,6 +82,7 @@
       out.id = typeof c.id === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(c.id) && !ids.has(c.id) ? c.id : uuid();
       ids.add(out.id);
       out.done = Object.fromEntries(Object.entries(c.done || {}).filter(([k, v]) => /^[a-zA-Z0-9_:.-]{1,180}$/.test(k) && v === true));
+      out.skipped = Object.fromEntries(Object.entries(c.skipped || {}).filter(([k, v]) => /^[a-zA-Z0-9_:.-]{1,180}$/.test(k) && v === true));
       out.notes = clean(c.notes, 20000);
       out.journey=normaliseJourney(c.journey);out.atlasMap=clean(c.atlasMap||'world',100);
       out.companion=normaliseCompanion(c.companion);
@@ -88,7 +90,7 @@
       out.compact = !!c.compact;
       out.filters = {
         categories: Array.isArray(c.filters?.categories) ? c.filters.categories.filter(x => CATEGORIES.includes(x)) : [...CATEGORIES],
-        view: ['now', 'soon', 'all'].includes(c.filters?.view) ? c.filters.view : 'now',
+        view: ['now', 'soon', 'all', 'skipped'].includes(c.filters?.view) ? c.filters.view : 'now',
         showDone: !!c.filters?.showDone
       };
       if(['solo','group'].includes(c.filters?.activity))out.filters.activity=c.filters.activity;
@@ -271,9 +273,20 @@
     return (!item.classId || item.classId === c.classId) && (!item.faction || item.faction === c.faction || item.faction === 'Both') && (!item.races || item.races.includes(c.race));
   }
   function questDone(q, c) {
-    return !!c.done[q.id] || !!(q.steps?.length && q.steps.every((_, i) => c.done[q.id + ':' + i]));
+    return !questSkipped(q, c) && (!!c.done[q.id] || !!(q.steps?.length && q.steps.every((_, i) => c.done[q.id + ':' + i])));
+  }
+  function questSkipped(q, c) {
+    return c.skipped?.[q.id] === true;
+  }
+  function setSkipped(c, item, skipped) {
+    c.skipped ||= {};
+    if (skipped) {
+      if (questDone(item, c)) setDone(c, item, false);
+      c.skipped[item.id] = true;
+    } else delete c.skipped[item.id];
   }
   function setDone(c, item, done) {
+    if (done && c.skipped) delete c.skipped[item.id];
     if (done) c.done[item.id] = true;else delete c.done[item.id];
     for (let i = 0; i < (item.steps?.length || 0); i++) {
       if (done) c.done[item.id + ':' + i] = true;else delete c.done[item.id + ':' + i];
@@ -299,6 +312,8 @@
     buildSteps,
     matchesCharacter,
     questDone,
+    questSkipped,
+    setSkipped,
     setDone,
     storeState
   };

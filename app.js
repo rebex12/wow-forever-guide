@@ -146,17 +146,17 @@
     return false;
   }
 
-  function campTasks(){const c=character();return window.RELEASE07.camping.filter(p=>c.professions.includes(p.profession)&&(c.professionSkills[p.profession]||0)>=p.skill).map(p=>({id:'camp-unlock-'+p.profession.toLowerCase().replace(/ /g,'-'),category:'professions',level:5,title:p.item+' · '+bi('camping unlock','campingupplåsning'),desc:L.t(p.effect),location:p.profession+' · '+bi('profession trainer or starter quest','professionstränare eller startquest'),source:p.source,status:'sourced',updated:'2026-10-27',steps:[]}));}
-  function craftTasks(){
+  function campTasks(includeAll=false){const c=character();return window.RELEASE07.camping.filter(p=>includeAll||(c.professions.includes(p.profession)&&(c.professionSkills[p.profession]||0)>=p.skill)).map(p=>({id:'camp-unlock-'+p.profession.toLowerCase().replace(/ /g,'-'),category:'professions',level:5,title:p.item+' · '+bi('camping unlock','campingupplåsning'),desc:L.t(p.effect),location:p.profession+' · '+bi('profession trainer or starter quest','professionstränare eller startquest'),source:p.source,status:'sourced',updated:'2026-10-27',steps:[]}));}
+  function craftTasks(includeAll=false){
     const c=character(),P=window.ProfessionPlanner;
-    return P.suggestions(c,activeBuild(),DB).map(g=>{
+    return (includeAll?P.gear:P.suggestions(c,activeBuild(),DB)).map(g=>{
       const missingSkill=g.skill&&!(c.professionSkills?.[g.profession]>=g.skill),laterLevel=g.equipLevel&&g.equipLevel>c.level;
       return {...g,category:'professions',title:g.name,level:g.equipLevel||g.guideLevel,craft:true,missingSkill,laterLevel};
-    }).filter(g=>c.filters.view==='all'||(c.filters.view==='soon'?(g.laterLevel&&g.level<=c.level+10)||g.missingSkill:!g.laterLevel&&!g.missingSkill));
+    }).filter(g=>includeAll||c.filters.view==='all'||(c.filters.view==='soon'?(g.laterLevel&&g.level<=c.level+10)||g.missingSkill:!g.laterLevel&&!g.missingSkill));
   }
   function craftTaskCard(g){
-    const c=character(),done=!!c.done[g.id];
-    return `<article data-goal-anchor="${esc(g.id)}" class="quest-card craft-task ${done?'done':''}"><div class="quest-head"><input class="quest-check" type="checkbox" data-check="${esc(g.id)}" aria-label="${bi('Mark as completed','Markera som klar')}: ${esc(g.name)}" ${done?'checked':''}><div class="quest-copy"><div class="card-meta"><span class="level-tag">${bi('CRAFT','CRAFT')}</span><span>${esc(g.profession)} · ${esc(g.spec)}</span>${g.equipLevel?`<span>${bi('Equip level','Användningslevel')} ${g.equipLevel}</span>`:''}</div><h3>${esc(g.name)}</h3><p>${esc(L.t(g.reason))}</p><div class="craft-state">${g.skill?`${bi('Recipe skill','Receptskill')}: ${g.skill} · ${g.missingSkill?bi('Train your profession first','Höj din professionskill först'):bi('Your skill is sufficient','Din skill räcker')}`:bi('Check the recipe’s required skill before crafting.','Kontrollera receptets skillkrav före crafting.')}<small>${bi('Compare stats, recipe access, binding and cost. Mark complete once you have crafted or considered this item.','Jämför stats, recept, bindning och kostnad. Markera klar när du craftat eller bedömt föremålet.')}</small></div><button class="text-button" data-page="professions">${bi('Profession details','Professionsdetaljer')} ${utilityIcon('arrow')}</button>${sourceLine(g)}${window.Companion.pinButton('craft',g.id,c,L.language)}</div>${gameIcon(window.GAME_ASSETS.professions[g.profession])}</div></article>`;
+    const c=character(),done=C.questDone(g,c);
+    return `<article data-goal-anchor="${esc(g.id)}" class="quest-card craft-task ${done?'done':''} ${C.questSkipped(g,c)?'skipped':''}"><div class="quest-head"><div class="quest-copy"><div class="card-meta"><span class="level-tag">${bi('CRAFT','CRAFT')}</span><span>${esc(g.profession)} · ${esc(g.spec)}</span>${g.equipLevel?`<span>${bi('Equip level','Användningslevel')} ${g.equipLevel}</span>`:''}</div><h3>${esc(g.name)}</h3><p>${esc(L.t(g.reason))}</p><div class="craft-state">${g.skill?`${bi('Recipe skill','Receptskill')}: ${g.skill} · ${g.missingSkill?bi('Train your profession first','Höj din professionskill först'):bi('Your skill is sufficient','Din skill räcker')}`:bi('Check the recipe’s required skill before crafting.','Kontrollera receptets skillkrav före crafting.')}<small>${bi('Compare stats, recipe access, binding and cost. Mark complete once you have crafted or considered this item.','Jämför stats, recept, bindning och kostnad. Markera klar när du craftat eller bedömt föremålet.')}</small></div><button class="text-button" data-page="professions">${bi('Profession details','Professionsdetaljer')} ${utilityIcon('arrow')}</button>${sourceLine(g)}${window.Companion.pinButton('craft',g.id,c,L.language)}</div>${gameIcon(window.GAME_ASSETS.professions[g.profession])}</div>${taskControls(g)}</article>`;
   }
 
   function companionContext(){const c=character();return {profile:c,data:D,crafts:window.ProfessionPlanner.gear.filter(g=>g.classId===c.classId),catalog:DB,travel:window.TRAVEL_DATA,language:L.language,save,render:renderContent,go,done:C.questDone,setDone:C.setDone,available:Q.available,matches:C.matchesCharacter,openGoal:(kind,id)=>{const item=(kind==='quest'?D.quests:kind==='dungeon'?D.dungeons:window.ProfessionPlanner.gear).find(q=>q.id===id);if(item){dialog(item.title||item.name,kind==='dungeon'?dungeonCard(item):kind==='craft'?craftTaskCard({...item,missingSkill:item.skill&&!(c.professionSkills[item.profession]>=item.skill)}):questCard(item));window.Companion.mount($('#dialog-content'),companionContext());}}};}
@@ -254,8 +254,34 @@
   }
   function coverage(){return `<div class="coverage-note">${utilityIcon('info')}<span>${bi('Selected quests and rewards, not a complete quest route. Level tags are suggested task levels; documented minimum requirements are shown separately.','Utvalda quests och belöningar, inte en komplett questrutt. Level-taggar visar föreslagen level; dokumenterade minimikrav visas separat.')} <button class="term" data-action="about">${bi('Content status and sources','Innehållsstatus och källor')}</button></span></div>`;}
   function tabs() {
+    const c = character(), skipped = c.filters.view === 'skipped';
+    const views = [['now', L.t('Aktuellt nu')], ['soon', L.t('Kommande')], ['all', L.t('Allt')], ['skipped', bi('Skipped', 'Skippade') + ' (' + Object.keys(c.skipped || {}).length + ')']];
+    return `<div class="section-top task-filters"><div class="view-tabs" role="group" aria-label="${bi('Which tasks should be shown?', 'Vilka uppgifter ska visas?')}">${views.map(([v, t]) => `<button data-view="${v}" class="${c.filters.view === v ? 'active' : ''}" aria-pressed="${c.filters.view === v}">${esc(t)}</button>`).join('')}</div>${skipped ? `<p class="field-hint skipped-hint">${bi('All skipped tasks for this character, across all levels and categories.', 'Alla skippade uppgifter för karaktären, från alla levels och kategorier.')}</p>` : `<label class="activity-choice"><span>${bi('Activities','Aktiviteter')}</span><select id="activity-filter"><option value="all" ${!c.filters.activity?'selected':''}>${bi('Solo & group','Solo och grupp')}</option><option value="solo" ${c.filters.activity==='solo'?'selected':''}>${bi('Solo','Solo')}</option><option value="group" ${c.filters.activity==='group'?'selected':''}>${bi('Group','Grupp')}</option></select></label><label class="form-check small"><input type="checkbox" id="show-done" ${c.filters.showDone ? 'checked' : ''}> ${bi('Show completed', 'Visa klara')}</label>`}</div>`;
+  }
+  function taskControls(item) {
+    const c = character(), done = C.questDone(item, c), skipped = C.questSkipped(item, c), name = item.title || item.name;
+    return `<div class="task-actions"><label class="form-check"><input class="quest-check" type="checkbox" data-check="${esc(item.id)}" aria-label="${bi('Mark as completed', 'Markera som klar')}: ${esc(name)}" ${done?'checked':''}><span>${bi('Complete', 'Klar')}</span></label>${skipped?`<span class="task-status">${bi('Skipped', 'Skippad')}</span>`:''}<button type="button" class="text-button task-skip" data-skip="${esc(item.id)}" aria-label="${skipped?bi('Undo skip','Ångra skippad'):bi('Skip task','Skippa uppgift')}: ${esc(name)}">${skipped?bi('Undo skip','Ångra skippad'):bi('Skip','Skippa')}</button></div>`;
+  }
+  function skippedItems() {
     const c = character();
-    return L.h`<div class="section-top"><div class="view-tabs" role="group" aria-label="Vilka levels ska visas?">${[['now', L.t('Aktuellt nu')], ['soon', L.t('Kommande')], ['all', L.t('Allt')]].map(([v, t]) => L.h`<button data-view="${v}" class="${c.filters.view === v ? 'active' : ''}" aria-pressed="${c.filters.view === v}">${L.t(t)}</button>`).join('')}</div><label class="activity-choice"><span>${bi('Activities','Aktiviteter')}</span><select id="activity-filter"><option value="all" ${!c.filters.activity?'selected':''}>${bi('Solo & group','Solo och grupp')}</option><option value="solo" ${c.filters.activity==='solo'?'selected':''}>${bi('Solo','Solo')}</option><option value="group" ${c.filters.activity==='group'?'selected':''}>${bi('Group','Grupp')}</option></select></label><label class="form-check small"><input type="checkbox" id="show-done" ${c.filters.showDone ? 'checked' : ''}> Visa klara</label></div>`;
+    const items = new Map([...D.quests, ...D.misc, ...DB.abilities, ...D.professions, ...D.dungeons.flatMap(d => d.quests), ...campTasks(true), ...craftTasks(true)].map(q => [q.id, q]));
+    return Object.keys(c.skipped || {}).filter(id => c.skipped[id] === true).map(id => items.get(id) || {id, title: id, category: 'tips', level: 1, desc: bi('This saved task is no longer in the guide. You can still undo its skipped status.', 'Denna sparade uppgift finns inte längre i guiden. Du kan fortfarande ångra att den skippats.')}).sort((a,b) => a.level-b.level || a.title.localeCompare(b.title));
+  }
+  function taskVisible(item) {
+    const c = character();
+    return !C.questSkipped(item, c) && (c.filters.showDone || !C.questDone(item, c));
+  }
+  function taskById(id) {
+    return (byId.has(id)?L.localize(byId.get(id)):null) || craftTasks(true).find(g => g.id === id) || campTasks(true).find(q => q.id === id) || {id, title: id};
+  }
+  function refreshTaskDialog(item, element) {
+    if (!element.closest('dialog')) return;
+    const dungeon = D.dungeons.find(d => d.quests.some(q => q.id === item.id));
+    if (dungeon) dialog(esc(dungeon.title), dungeonCard(dungeon));
+    else {
+      const card = element.closest('.quest-card');
+      if (card) card.outerHTML = questCard(item);
+    }
   }
   function inView(item) {
     const c = character(),
@@ -268,12 +294,13 @@
   }
   function actionableItems() {
  const c=character();
- return [...D.quests,...D.misc,...craftTasks(),...campTasks()].filter(q=>visible(q)&&(q.craft||inView(q))&&Q.available(q,c,D.quests,C.questDone)&&(c.filters.showDone||!C.questDone(q,c))).sort((a,b)=>a.level-b.level||a.title.localeCompare(b.title));
+ if(c.filters.view==='skipped')return skippedItems();
+ return [...D.quests,...D.misc,...craftTasks(),...campTasks()].filter(q=>visible(q)&&(q.craft||inView(q))&&Q.available(q,c,D.quests,C.questDone)&&taskVisible(q)).sort((a,b)=>a.level-b.level||a.title.localeCompare(b.title));
 }
   function questCard(q) {
  if(q.craft)return craftTaskCard(q);
  const c=character(),done=C.questDone(q,c),partial=q.steps?.filter((_,i)=>c.done[q.id+':'+i]).length||0;
- return `<article data-goal-anchor="${esc(q.id)}" class="quest-card ${done?'done':''}"><div class="quest-head"><input class="quest-check" type="checkbox" data-check="${esc(q.id)}" aria-label="${bi('Mark as completed','Markera som klar')}: ${esc(q.title)}" ${done?'checked':''}><div class="quest-copy"><div class="card-meta">${levelTag(q.level,done)}<span>${q.classId?esc(DB.classes[q.classId].name)+' · '+bi('Class quest','Klassquest'):esc(q.kind||L.t(categoryNames[q.category])||'Quest')}</span>${q.highValue?`<span class="reward-tag">${bi('Notable reward','Bra belöning')}</span>`:''}${q.group?`<span>${bi('Group','Grupp')}: ${esc(q.group)}</span>`:''}${partial&&!done?`<span>· ${partial}/${q.steps.length} ${bi('steps','steg')}</span>`:''}</div><h3>${esc(q.title)}</h3>${c.helpLevel>=2?`<p>${esc(q.desc||bi('Check this task when it becomes available.','Kontrollera uppgiften när den blir tillgänglig.'))}</p>`:''}${q.highValue&&q.reward?`<p class="quest-reward">${esc(q.reward)}</p>`:''}${q.status==='preliminary'?`<small class="content-caution">${esc(q.caution||bi('Preliminary: check the quest log for the current Forever requirements and reward.','Preliminärt: kontrollera aktuella Forever-krav och belöning i questloggen.'))}</small>`:''}${rewardPreview(q)}</div><span class="quest-icon">${q.classId?gameIcon(window.GAME_ASSETS.classes[q.classId]):icon(categoryIcons[q.category]||'scroll')}</span></div><details class="quest-details" ${c.helpLevel>=3?'open':''}><summary>${bi('Show steps and location','Visa steg och plats')}</summary><div class="details-inner">${q.location||q.reward?`<dl>${q.location?`<dt>${bi('Start / location','Start / plats')}</dt><dd>${esc(q.location)} ${q.coords?coordinate(q.coords):''}</dd>`:''}${q.reward&&!q.highValue?`<dt>${bi('Reward','Belöning')}</dt><dd>${esc(q.reward)}</dd>`:''}${q.minLevel?`<dt>${bi('Minimum level','Lägsta level')}</dt><dd>${q.minLevel}</dd>`:''}</dl>`:''}${q.audience?`<p>${bi('Useful for','Passar för')}: ${esc(q.audience)}</p>`:''}${q.prereq?`<p>${bi('Prerequisites','Förkrav')}: ${esc(q.prereq)}</p>`:''}${q.category==='abilities'?`<p>${bi('First training level from the Forever calculator. A class quest or another unlock may also be required.','Första träningsnivå enligt Forever-kalkylatorn. En klassquest eller annan upplåsning kan också krävas.')}</p>`:''}${q.steps?.length?`<div class="step-list">${q.steps.map((s,i)=>`<label class="step-row ${c.done[q.id+':'+i]?'completed':''}"><input type="checkbox" data-step="${esc(q.id)}" data-index="${i}" ${c.done[q.id+':'+i]?'checked':''}><span>${esc(s)}</span></label>`).join('')}</div>`:''}${sourceLine(q)}${q.category==='quests'&&D.quests.some(x=>x.id===q.id)?window.Companion.pinButton('quest',q.id,c,L.language):''}</div></details></article>`;
+ return `<article data-goal-anchor="${esc(q.id)}" class="quest-card ${done?'done':''} ${C.questSkipped(q,c)?'skipped':''}"><div class="quest-head"><div class="quest-copy"><div class="card-meta">${levelTag(q.level,done||C.questSkipped(q,c))}<span>${q.classId?esc(DB.classes[q.classId].name)+' · '+bi('Class quest','Klassquest'):esc(q.kind||L.t(categoryNames[q.category])||'Quest')}</span>${q.highValue?`<span class="reward-tag">${bi('Notable reward','Bra belöning')}</span>`:''}${q.group?`<span>${bi('Group','Grupp')}: ${esc(q.group)}</span>`:''}${partial&&!done?`<span>· ${partial}/${q.steps.length} ${bi('steps','steg')}</span>`:''}</div><h3>${esc(q.title)}</h3>${c.helpLevel>=2?`<p>${esc(q.desc||bi('Check this task when it becomes available.','Kontrollera uppgiften när den blir tillgänglig.'))}</p>`:''}${q.highValue&&q.reward?`<p class="quest-reward">${esc(q.reward)}</p>`:''}${q.status==='preliminary'?`<small class="content-caution">${esc(q.caution||bi('Preliminary: check the quest log for the current Forever requirements and reward.','Preliminärt: kontrollera aktuella Forever-krav och belöning i questloggen.'))}</small>`:''}${rewardPreview(q)}</div><span class="quest-icon">${q.classId?gameIcon(window.GAME_ASSETS.classes[q.classId]):icon(categoryIcons[q.category]||'scroll')}</span></div>${taskControls(q)}<details class="quest-details" ${c.helpLevel>=3?'open':''}><summary>${bi('Show steps and location','Visa steg och plats')}</summary><div class="details-inner">${q.location||q.reward?`<dl>${q.location?`<dt>${bi('Start / location','Start / plats')}</dt><dd>${esc(q.location)} ${q.coords?coordinate(q.coords):''}</dd>`:''}${q.reward&&!q.highValue?`<dt>${bi('Reward','Belöning')}</dt><dd>${esc(q.reward)}</dd>`:''}${q.minLevel?`<dt>${bi('Minimum level','Lägsta level')}</dt><dd>${q.minLevel}</dd>`:''}</dl>`:''}${q.audience?`<p>${bi('Useful for','Passar för')}: ${esc(q.audience)}</p>`:''}${q.prereq?`<p>${bi('Prerequisites','Förkrav')}: ${esc(q.prereq)}</p>`:''}${q.category==='abilities'?`<p>${bi('First training level from the Forever calculator. A class quest or another unlock may also be required.','Första träningsnivå enligt Forever-kalkylatorn. En klassquest eller annan upplåsning kan också krävas.')}</p>`:''}${q.steps?.length?`<div class="step-list">${q.steps.map((s,i)=>`<label class="step-row ${c.done[q.id+':'+i]?'completed':''}"><input type="checkbox" data-step="${esc(q.id)}" data-index="${i}" ${c.done[q.id+':'+i]?'checked':''}><span>${esc(s)}</span></label>`).join('')}</div>`:''}${sourceLine(q)}${q.category==='quests'&&D.quests.some(x=>x.id===q.id)?window.Companion.pinButton('quest',q.id,c,L.language):''}</div></details></article>`;
 }
   function coordinate(coords) {
     return L.h`<button class="coordinate" data-copy="${esc(coords)}" aria-label="Kopiera koordinater">${esc(coords)} ${icon('copy')}</button>`;
@@ -299,7 +326,7 @@
   }
   function heading() {
  const c=character(),n=nav.find(n=>n[0]===page)||nav[0];
- $('#page-heading').innerHTML=`<div class="heading-row"><button class="icon-button mobile-menu" data-action="menu" aria-label="${bi('Open menu','Öppna menyn')}">${utilityIcon('menu')}</button><button class="icon-button" id="back-button" data-action="back" aria-label="${bi('Back','Tillbaka')}" ${navTrail.length?'':'disabled'}>${utilityIcon('back')}</button><h1>${c.blank&&page!=='world-map'?bi('Create your character','Skapa din karaktär'):esc(L.t(n[1]))}</h1><button class="draft-badge" data-action="about">0.7.0</button></div>`;
+ $('#page-heading').innerHTML=`<div class="heading-row"><button class="icon-button mobile-menu" data-action="menu" aria-label="${bi('Open menu','Öppna menyn')}">${utilityIcon('menu')}</button><button class="icon-button" id="back-button" data-action="back" aria-label="${bi('Back','Tillbaka')}" ${navTrail.length?'':'disabled'}>${utilityIcon('back')}</button><h1>${c.blank&&page!=='world-map'?bi('Create your character','Skapa din karaktär'):esc(L.t(n[1]))}</h1><button class="draft-badge" data-action="about">0.7.1</button></div>`;
 }
   function renderShell() {
     applyPreferences();
@@ -326,18 +353,19 @@
       steps = b ? C.buildSteps(b, DB) : [],
       now = steps.find(s => s.level === c.level),
       next = steps.find(s => s.level > c.level),
-      q = D.quests.filter(q => q.classId && C.matchesCharacter(q, c) && Q.available(q,c,D.quests,C.questDone) && !C.questDone(q, c) && q.level <= c.level + 10).sort((a, b) => Math.abs(a.level - c.level) - Math.abs(b.level - c.level))[0],
+      q = D.quests.filter(q => q.classId && C.matchesCharacter(q, c) && Q.available(q,c,D.quests,C.questDone) && !C.questDone(q, c) && !C.questSkipped(q, c) && q.level <= c.level + 10).sort((a, b) => Math.abs(a.level - c.level) - Math.abs(b.level - c.level))[0],
       ds = availableDungeons();
-    return `<div class="summary-grid">${talentPointCard(bi('Talent at this level', 'Talent för denna level'), now, b)}${talentPointCard(bi('Next talent point', 'Nästa talentpoäng'), next, b)}<button class="summary-card" data-page="quests" ${c.filters.categories.includes('quests') ? '' : 'hidden'}><span class="summary-title">${icon('scroll')} ${bi('Class quest', 'Klassquest')}</span><strong>${q ? esc(q.title) : bi('All listed milestones completed', 'Alla noterade milstolpar klara')}</strong><small>${q ? 'Level ' + q.level : bi('Open class quests', 'Öppna klassquests')}</small></button><button class="summary-card" data-page="dungeons" ${c.filters.categories.includes('dungeons') ? '' : 'hidden'}><span class="summary-title">${icon('dungeon')} Dungeons</span><strong>${ds.length ? esc(ds[0].title) : bi('No dungeon in this range', 'Ingen dungeon i intervallet')}</strong><small>${bi('Open dungeon list', 'Öppna dungeonlistan')}</small></button></div>`;
+    return `<div class="summary-grid">${talentPointCard(bi('Talent at this level', 'Talent för denna level'), now, b)}${talentPointCard(bi('Next talent point', 'Nästa talentpoäng'), next, b)}<button class="summary-card" data-page="quests" ${c.filters.categories.includes('quests') ? '' : 'hidden'}><span class="summary-title">${icon('scroll')} ${bi('Class quest', 'Klassquest')}</span><strong>${q ? esc(q.title) : bi('No pending milestone in this range', 'Ingen kvarvarande milstolpe i intervallet')}</strong><small>${q ? 'Level ' + q.level : bi('Open class quests', 'Öppna klassquests')}</small></button><button class="summary-card" data-page="dungeons" ${c.filters.categories.includes('dungeons') ? '' : 'hidden'}><span class="summary-title">${icon('dungeon')} Dungeons</span><strong>${ds.length ? esc(ds[0].title) : bi('No dungeon in this range', 'Ingen dungeon i intervallet')}</strong><small>${bi('Open dungeon list', 'Öppna dungeonlistan')}</small></button></div>`;
   }
   function overview() {
     const c = character(),
       tasks = actionableItems(),
-      all = c.filters.view === 'all' || c.filters.showDone,
+      all = c.filters.view === 'all' || c.filters.view === 'skipped' || c.filters.showDone,
       limit = all || c.helpLevel === 4 ? Infinity : c.helpLevel === 1 ? 3 : c.helpLevel === 2 ? 6 : 12,
       zones = recommendedZones().slice(0, 2),
       shown=all||c.helpLevel===4?tasks:[...tasks.filter(q=>!q.craft).slice(0,limit),...tasks.filter(q=>q.craft).sort((a,b)=>b.level-a.level).slice(0,3)].sort((a,b)=>a.level-b.level||a.title.localeCompare(b.title));
-    return hero() + sessionPanel() + summary() + window.Companion.goals(companionContext()) + window.Companion.townVisit({...companionContext(),training:window.RELEASE07.training}) + zoneOverview() + `<section><div class="section-top"><h2>${icon('scroll')} ${bi('To do now', 'Att göra nu')}</h2><button class="text-button" data-page="quests">${bi('All quests', 'Alla quests')} ${icon('arrow')}</button></div>${tabs()}<div class="quest-list">${tasks.length ? shown.map(questCard).join('') : empty()}</div>${tasks.length > shown.length ? `<button class="text-button" data-view="all">${bi('See more tasks', 'Se fler uppgifter')} ${icon('arrow')}</button>` : ''}</section>${!c.currentZone && c.filters.categories.includes('zones') ? `<section class="zone-section"><div class="section-top"><h2>${bi('Suggested zones', 'Föreslagna zoner')}</h2></div><div class="card-grid">${zones.map(z => zoneCard(z)).join('')}</div></section>` : ''}` + coverage();
+    const checklist = `<section class="overview-checklist" aria-label="${bi('Checklist', 'Checklista')}"><div class="section-top"><h2>${icon('scroll')} ${c.filters.view==='skipped'?bi('Skipped tasks','Skippade uppgifter'):bi('To do now', 'Att göra nu')}</h2><button class="text-button" data-page="quests">${bi('All quests', 'Alla quests')} ${icon('arrow')}</button></div>${tabs()}<div class="quest-list">${tasks.length ? shown.map(questCard).join('') : c.filters.view==='skipped'?empty(bi('No skipped tasks','Inga skippade uppgifter'),bi('Tasks you skip will appear here. Use Undo skip to put one back on your to-do list.','Uppgifter som du skippar visas här. Välj Ångra skippad för att lägga tillbaka en i checklistan.')):empty()}</div>${tasks.length > shown.length ? `<button class="text-button" data-view="all">${bi('See more tasks', 'Se fler uppgifter')} ${icon('arrow')}</button>` : ''}</section>`;
+    return hero() + checklist + sessionPanel() + summary() + window.Companion.goals(companionContext()) + window.Companion.townVisit({...companionContext(),training:window.RELEASE07.training}) + zoneOverview() + `${!c.currentZone && c.filters.categories.includes('zones') ? `<section class="zone-section"><div class="section-top"><h2>${bi('Suggested zones', 'Föreslagna zoner')}</h2></div><div class="card-grid">${zones.map(z => zoneCard(z)).join('')}</div></section>` : ''}` + coverage();
   }
   function talents() {
     const c = character(),
@@ -371,7 +399,7 @@
   }
   function abilitiesPage() {
     const c = character(),
-      abilities = DB.abilities.filter(a => visible(a) && inView(a) && (c.filters.showDone || !c.done[a.id]) && (c.filters.view !== 'now' || a.level >= c.level - 3)).sort((a, b) => a.level - b.level);
+      abilities = DB.abilities.filter(a => visible(a) && inView(a) && taskVisible(a) && (c.filters.view !== 'now' || a.level >= c.level - 3)).sort((a, b) => a.level - b.level);
     return tabs() + L.h`<div class="coverage-note">${icon('sparkles')}<span>Här visas första träningsnivån för varje förmåga. Högre ranks och träningskostnader kompletteras. Klassquests kan vara ett extra krav.</span></div><div class="quest-list">${abilities.length ? abilities.map(questCard).join('') : empty()}</div>`;
   }
   function gearPage() {
@@ -556,10 +584,19 @@
       go(target.dataset.page);
       return;
     }
+    if (target.dataset.skip) {
+      const c = character(), item = taskById(target.dataset.skip), skipped = !C.questSkipped(item, c);
+      C.setSkipped(c, item, skipped);
+      save();
+      refreshTaskDialog(item, target);
+      renderContent();
+      notify(skipped ? bi('Task skipped. Find it in Skipped.', 'Uppgiften skippad. Du hittar den under Skippade.') : bi('Task restored to your to-do list.', 'Uppgiften finns åter i checklistan.'));
+      return;
+    }
     if (target.dataset.view) {
       character().filters.view = target.dataset.view;
       save();
-      renderContent();
+      if(target.dataset.view==='skipped'&&page!=='overview')go('overview');else renderContent();
       return;
     }
     if (target.dataset.character) {
@@ -715,7 +752,7 @@
     const c = character(),
       z = D.zones.find(z => z.id === c.currentZone);
     if (!z) return sessionPanel() + L.h`<div class="empty-state">${icon('map')}<h2>${bi('Choose a zone to see local guidance', 'Välj en zon för att se lokal hjälp')}</h2><p>${bi('You can search using a town or subzone name too.', 'Du kan även söka med namnet på en ort eller subzon.')}</p><button class="primary-button" data-action="choose-zone">${bi('Find my zone', 'Hitta min zon')}</button></div>`;
-    const qs = T.questsForZone(D, z, c, C.matchesCharacter).filter(q => Q.available(q,c,D.quests,C.questDone) && c.filters.categories.includes(q.category) && (c.filters.showDone || !C.questDone(q, c)) && (c.filters.view === 'all' || q.level <= c.level + 10)).sort((a,b)=>a.level-b.level||a.title.localeCompare(b.title));
+    const qs = T.questsForZone(D, z, c, C.matchesCharacter).filter(q => Q.available(q,c,D.quests,C.questDone) && c.filters.categories.includes(q.category) && taskVisible(q) && (c.filters.view === 'all' || q.level <= c.level + 10)).sort((a,b)=>a.level-b.level||a.title.localeCompare(b.title));
     const dungeons = D.dungeons.filter(d => z.dungeonIds.includes(d.id) && (d.faction === 'Both' || d.faction === c.faction));
     const localSteps = z.localSteps || [];
     let html = L.h`<section class="info-card zone-guide-intro"><div class="zone-heading"><div><div class="eyebrow">${bi('YOUR CURRENT ZONE', 'DIN NUVARANDE ZON')}</div><h2>${esc(z.title)}</h2></div><button class="secondary-button" data-action="choose-zone">${bi('Change zone', 'Byt zon')}</button></div>${c.currentPlace && c.currentPlace !== z.title ? L.h`<p>${esc(c.currentPlace)} ${bi('is part of', 'är en del av')} <strong>${esc(z.title)}</strong>.</p>` : ''}<p>${esc(c.beginner && z.beginnerDesc ? z.beginnerDesc : z.desc)}</p><div class="card-meta"><span class="level-tag">${z.isCity ? bi('Capital city', 'Huvudstad') : 'Level ' + z.level + '–' + z.maxLevel}</span><span>${c.level < z.level ? bi('You are below this zone’s listed range.', 'Du är under zonens angivna intervall.') : c.level > z.maxLevel ? bi('You are above this zone’s listed range.', 'Du är över zonens angivna intervall.') : bi('Your level is within the listed range.', 'Din level ligger inom det angivna intervallet.')}</span></div>${z.faction !== 'Both' && z.faction !== c.faction ? L.h`<p class="error-text">${bi('This zone is mainly associated with', 'Zonen hör främst till')} ${esc(z.faction)}.</p>` : ''}${sourceLine(z)}</section>`;
@@ -817,7 +854,7 @@
     const c = character(),
       z = D.zones.find(z => z.id === c.currentZone);
     if (!z) return '';
-    const qs = T.questsForZone(D, z, c, C.matchesCharacter).filter(q => Q.available(q,c,D.quests,C.questDone) && c.filters.categories.includes(q.category) && (c.filters.showDone || !C.questDone(q, c)) && q.level <= c.level + 10 && window.Companion.activity(q,c.filters.activity)).sort((a, b) => a.level - b.level),
+    const qs = T.questsForZone(D, z, c, C.matchesCharacter).filter(q => Q.available(q,c,D.quests,C.questDone) && c.filters.categories.includes(q.category) && taskVisible(q) && q.level <= c.level + 10 && window.Companion.activity(q,c.filters.activity)).sort((a, b) => a.level - b.level),
       ds = c.filters.categories.includes('dungeons') ? D.dungeons.filter(d => window.Companion.activity(d,c.filters.activity) && z.dungeonIds.includes(d.id) && C.matchesCharacter(d, c) && (c.helpLevel === 4 || d.level <= c.level + 10)) : [],
       steps = c.filters.categories.includes('tips') && c.helpLevel >= 2 ? (z.localSteps || []).slice(0, c.helpLevel === 2 ? 2 : undefined) : [];
     return `<section class="zone-overview info-card"><div class="section-top"><h2>${icon('map')} ${bi('Tips for', 'Tips för')} ${esc(z.title)}</h2><button class="text-button" data-page="zone-guide">${bi('More zone details', 'Mer om zonen')} ${icon('arrow')}</button></div><p>${esc(c.beginner && z.beginnerDesc ? z.beginnerDesc : z.desc)}</p>${z.faction !== 'Both' && z.faction !== c.faction ? `<p class="error-text">${bi('Mainly associated with', 'Hör främst till')} ${esc(z.faction)}</p>` : ''}${steps.length ? `<ol class="zone-route">${steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>` : ''}${qs.length ? `<div class="quest-list">${qs.map(questCard).join('')}</div>` : ''}${ds.map(d => `<details class="zone-dungeon" ${c.helpLevel >= 3 ? 'open' : ''}><summary>${esc(d.title)} · Level ${d.level}–${d.maxLevel} · ${bi('Quests and preparation', 'Quests och förberedelser')}</summary>${dungeonCard(d)}</details>`).join('')}${sourceLine(z)}</section>`;
@@ -1000,22 +1037,17 @@ function professionGear(){
       return;
     }
     if (el.dataset.check) {
-      const item = byId.get(el.dataset.check) || craftTasks().find(g=>g.id===el.dataset.check) || {
-        id: el.dataset.check
-      };
+      const item = taskById(el.dataset.check);
       C.setDone(c, item, el.checked);
       save();
-      const insideDialog = el.closest('dialog');
-      if (insideDialog) {
-        const d = D.dungeons.find(d => d.quests.some(q => q.id === item.id));
-        if (d) dialog(esc(d.title), dungeonCard(d));
-      }
+      refreshTaskDialog(item, el);
       renderContent();
       return;
     }
     if (el.dataset.step) {
       const item = byId.get(el.dataset.step),
-        key = item.id + ':' + el.dataset.index;
+        key = item.id + ':' + el.dataset.index, wasSkipped = C.questSkipped(item, c);
+      if (el.checked) C.setSkipped(c, item, false);
       if (el.checked) c.done[key] = true;else delete c.done[key];
       const wasDone=C.questDone(item,{...c,done:{...c.done,[key]:!el.checked}});
       if (item.steps.every((_, i) => c.done[item.id + ':' + i])) c.done[item.id] = true;else delete c.done[item.id];
@@ -1028,7 +1060,7 @@ function professionGear(){
         const checkbox = parent?.querySelector('[data-check]');
         if (checkbox) checkbox.checked = C.questDone(item, c);
       }
-      if(wasDone!==C.questDone(item,c))renderContent();
+      if(wasSkipped||wasDone!==C.questDone(item,c)){refreshTaskDialog(item,el);renderContent();}
       return;
     }
     if (el.dataset.category) {

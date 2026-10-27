@@ -74,6 +74,37 @@ test('detailed assistance expands quest steps and highest assistance survives co
   const a=app(),c=a.api.character();Object.assign(c,C.createCharacter({level:20}));c.blank=false;c.helpLevel=4;c.compact=true;c.filters.view='all';const card=a.api.questCard({id:'test',title:'Test',category:'quests',level:1,steps:['One','Two']});assert.match(card,/<details[^>]+open/);
   const html=a.api.overview();assert(!html.includes('Matched place'));assert(!html.includes('session-help-level'));a.api.settings();assert.match(a.element('#dialog-content').innerHTML,/settings-help-level/);
 });
+test('Overview places the checklist immediately after the level selector',()=>{
+ const a=app(),c=a.api.character();Object.assign(c,C.createCharacter({level:20}));c.blank=false;
+ const html=a.api.overview(),level=html.indexOf('id="character-level"'),checklist=html.indexOf('class="overview-checklist"');
+ assert(level>=0&&checklist>level);assert(checklist<html.indexOf('session-panel'));assert(checklist<html.indexOf('summary-grid'));
+ assert.match(html,/data-skip="first-town"/);assert.match(html,/Skipped \(0\)/);
+});
+test('Skipped lists every saved skip despite level, help, profession, category and activity filters',()=>{
+ const a=app(),c=a.api.character();Object.assign(c,C.createCharacter({level:1,helpLevel:1}));c.blank=false;c.beginner=false;
+ const craft=a.api.craftTasks(true)[0];assert(craft);
+ c.skipped={'first-town':true,'shaman-water':true,[craft.id]:true,'retired-task':true};
+ c.filters={view:'skipped',categories:[],activity:'solo',showDone:false};
+ const items=a.api.actionableItems();assert.equal(items.length,4);assert(items.some(q=>q.id==='shaman-water'));assert(items.some(q=>q.id===craft.id));
+ const html=a.api.overview();assert.match(html,/Skipped \(4\)/);
+ for(const id of Object.keys(c.skipped))assert(html.includes('data-skip="'+id+'"'),id);
+ assert(!html.includes('[object Object]'));assert(!html.includes('data-view="all">See more tasks'));
+ c.filters={view:'all',categories:[...C.CATEGORIES],showDone:true};
+ assert(!a.api.actionableItems().some(q=>c.skipped[q.id]));
+});
+test('real task actions skip, restore and complete without conflating saved statuses',async()=>{
+ const a=app(),c=a.api.character();Object.assign(c,C.createCharacter({level:20}));c.blank=false;
+ const button={dataset:{skip:'first-town'},closest:()=>null};
+ await a.listeners.click[0]({target:{closest:()=>button}});
+ assert.equal(c.skipped['first-town'],true);assert.equal(c.done['first-town'],undefined);
+ assert(!a.api.actionableItems().some(q=>q.id==='first-town'));
+ const stored=JSON.parse(a.storage.get(C.KEY));assert.equal(stored.characters[0].skipped['first-town'],true);
+ await a.listeners.click[0]({target:{closest:()=>button}});assert.equal(c.skipped['first-town'],undefined);
+ assert(a.api.actionableItems().some(q=>q.id==='first-town'));
+ C.setSkipped(c,{id:'first-town'},true);
+ a.events.change({target:{dataset:{check:'first-town'},checked:true,closest:()=>null}});
+ assert.equal(c.skipped['first-town'],undefined);assert.equal(c.done['first-town'],true);
+});
 test('all new scripts and styles are cached for offline use',()=>{
   const sw=file('sw.js'),html=file('index.html');for(const match of html.matchAll(/(?:src|href)="\.\/([^"#]+\.(?:js|css))"/g))assert(sw.includes("'./"+match[1]+"'"),match[1]);assert(sw.includes("'"+data().GUIDE_CONTENT.version+"'"));
 });

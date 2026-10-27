@@ -12,6 +12,8 @@ Start with an empty profile and create your own characters. Each profile keeps i
 
 Overview shows the character, current and next talent choices, class milestones, and tasks. Select a zone, town, or subzone to see local tips and reward quests on the same page. Crossroads and Ratchet, for example, both select The Barrens.
 
+The Overview checklist sits directly below the character and level selector. Mark tasks Complete or Skip them. Skipped tasks do not count as completed or unlock follow-up quests. The Skipped view lists all skipped tasks for the character across all levels, categories and activity filters, with Undo skip to restore them; skipped status is preserved in JSON backups.
+
 Tasks are sorted by ascending level in every view. Filter by current, upcoming, or all levels; completed tasks remain available when Show completed is enabled. Follow-up quests unlock after their documented prerequisites are checked off. Available quests preview noteworthy rewards later in the chain.
 
 ## Talents and builds
