@@ -2,6 +2,12 @@
 
 This changelog tracks changes published to the GitHub repository. It is not displayed on the website.
 
+## 0.7.7 – 2026-10-27
+- **Character selector:** Show the full character name in the sidebar instead of truncating it with an ellipsis. Names such as **Shamanta Fox** wrap naturally onto multiple lines, and longer names expand the card vertically without overlapping the class icon or dropdown arrow. (`v07.css`)
+- **Accessibility:** Added a full-name hover tooltip to the character switcher. (`app.js`)
+- **Regression coverage:** Added checks for multi-line sidebar names and the full-name tooltip. (`tests/release07.test.cjs`)
+- Updated the version and offline cache so the styling refreshes on GitHub Pages. (`app.js`, `index.html`, `sw.js`)
+
 ## 0.7.6 – 2026-10-27
 - **Continent maps:** Replaced small marker-radius limits with contiguous land-area hit testing on Kalimdor and Eastern Kingdoms. Land clicks no longer fail solely because the pointer is too far from a zone marker. Approximate coastal masks keep clicks far out at sea inactive. (`world-map.js`)
 - **Zone boundaries:** Added hand-shaped region contours for western Winterspring, The Barrens, Mulgore, and Stonetalon Mountains on Kalimdor, as well as the visible neighboring areas on The Barrens zone map. These are approximate hit areas, not pixel-perfect game boundaries. (`world-map.js`)
