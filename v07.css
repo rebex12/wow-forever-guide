@@ -31,12 +31,3 @@
  .task-filters .view-tabs{margin-right:0}
  .task-filters>.form-check{margin-left:auto}
 }
-
-/* World Map: touch-friendly navigation between directly adjacent zones. */
-.atlas-neighbors{display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:9px;margin-top:12px}
-.atlas-neighbors:empty{display:none}
-.atlas-neighbors>strong{font-size:12px;color:var(--muted);font-weight:600}
-.atlas-neighbors>div{display:flex;gap:7px;flex-wrap:wrap}
-.atlas-neighbors button{min-height:42px;padding:8px 12px;border-radius:7px;border:1px solid var(--line-strong);background:var(--panel2);font-size:12px}
-.atlas-neighbors button:hover,.atlas-neighbors button:focus-visible{border-color:var(--accent);color:var(--accent)}
-@media(max-width:720px){.atlas-neighbors{align-items:stretch;flex-direction:column}.atlas-neighbors>div{gap:8px}.atlas-neighbors button{min-height:46px}}
