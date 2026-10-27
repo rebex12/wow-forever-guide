@@ -2,7 +2,7 @@
 // Relative URLs keep GitHub Pages project sites and subfolders working.
 const SCOPE = new URL(self.registration.scope).pathname;
 const PREFIX = 'fardvag-' + SCOPE.replace(/[^a-z0-9]/gi,'_') + '-';
-const CACHE = PREFIX + 'reload-r1-' + '0.7.7';
+const CACHE = PREFIX + 'reload-r1-' + '0.7.8';
 const FILES = ['./','./index.html','./styles.css','./v03.css','./character-rules.js','./game-assets.js','./themes.css','./i18n.js','./locales.js','./guide-tools.js','./zone-data.js','./controller-data.js','./catalog.js','./content.js','./core.js','./app.js','./v04.css','./quest-chains.js','./profession-planner.js','./release-content.js','./talent-text.js','./assets/talents/161.jpg','./assets/talents/163.jpg','./assets/talents/164.jpg','./assets/talents/181.jpg','./assets/talents/182.jpg','./assets/talents/183.jpg','./assets/talents/201.jpg','./assets/talents/202.jpg','./assets/talents/203.jpg','./assets/talents/261.jpg','./assets/talents/262.jpg','./assets/talents/263.jpg','./assets/talents/281.jpg','./assets/talents/282.jpg','./assets/talents/283.jpg','./assets/talents/301.jpg','./assets/talents/302.jpg','./assets/talents/303.jpg','./assets/talents/361.jpg','./assets/talents/362.jpg','./assets/talents/363.jpg','./assets/talents/381.jpg','./assets/talents/382.jpg','./assets/talents/383.jpg','./assets/talents/41.jpg','./assets/talents/61.jpg','./assets/talents/81.jpg','./manifest.webmanifest','./assets/compass.svg'];
 FILES.push('./v05.css','./talent-editor.js','./world-map.js','./map-data.js','./assets/maps/eastern.webp','./assets/maps/kalimdor.webp','./assets/maps/world.webp');
 FILES.push('./v06.css','./travel-data.js','./travel-planner.js');

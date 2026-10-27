@@ -208,7 +208,7 @@
   }
   state.settings ||= {
     language: 'en',
-    theme: 'forest'
+    theme: 'dark'
   };
   state.settings.showSourceLinks=state.settings.showSourceLinks===true;
   L.setLanguage(state.settings.language);
@@ -326,7 +326,7 @@
   }
   function heading() {
  const c=character(),n=nav.find(n=>n[0]===page)||nav[0];
- $('#page-heading').innerHTML=`<div class="heading-row"><button class="icon-button mobile-menu" data-action="menu" aria-label="${bi('Open menu','Öppna menyn')}">${utilityIcon('menu')}</button><button class="icon-button" id="back-button" data-action="back" aria-label="${bi('Back','Tillbaka')}" ${navTrail.length?'':'disabled'}>${utilityIcon('back')}</button><h1>${c.blank&&page!=='world-map'?bi('Create your character','Skapa din karaktär'):esc(L.t(n[1]))}</h1><button class="draft-badge" data-action="about">0.7.7</button></div>`;
+ $('#page-heading').innerHTML=`<div class="heading-row"><button class="icon-button mobile-menu" data-action="menu" aria-label="${bi('Open menu','Öppna menyn')}">${utilityIcon('menu')}</button><button class="icon-button" id="back-button" data-action="back" aria-label="${bi('Back','Tillbaka')}" ${navTrail.length?'':'disabled'}>${utilityIcon('back')}</button><h1>${c.blank&&page!=='world-map'?bi('Create your character','Skapa din karaktär'):esc(L.t(n[1]))}</h1><button class="draft-badge" data-action="about">0.7.8</button></div>`;
 }
   function renderShell() {
     applyPreferences();
@@ -996,7 +996,7 @@ function professionGear(){
       return;
     }
     if (el.id === 'language-select' || el.id === 'theme-select') {
-      if (el.id === 'language-select') state.settings.language = el.value === 'sv' ? 'sv' : 'en';else state.settings.theme = ['forest', 'dark', 'light', 'frost', 'parchment'].includes(el.value) ? el.value : 'forest';
+      if (el.id === 'language-select') state.settings.language = el.value === 'sv' ? 'sv' : 'en';else state.settings.theme = ['forest', 'dark', 'light', 'frost', 'parchment'].includes(el.value) ? el.value : 'dark';
       save();
       renderShell();
       settings();

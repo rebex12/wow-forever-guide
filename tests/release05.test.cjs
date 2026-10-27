@@ -133,3 +133,35 @@ test('adjacent-zone panel is removed, while the in-map navigation stays availabl
  assert(code.includes('neighboringZoneAt(maps,map.id,u,v'));
  assert(code.includes('autoOpen&&!map.zoneId'));
 });
+
+test('every documented land-connected zone can be clicked from its neighbour',()=>{
+ const travel=require('../travel-data.js');
+ let zoneCount=0,edgeCount=0;
+ for(const current of Object.values(maps).filter(m=>m.zoneId)){
+  zoneCount++;
+  for(const neighbor of A.adjacentZones(maps,current.id,travel)){
+   edgeCount++;
+   let canEnter=false;
+   for(let yi=0;yi<=24&&!canEnter;yi++){
+    for(let xi=0;xi<=24&&!canEnter;xi++){
+     canEnter=A.neighboringZoneAt(maps,current.id,xi/24,yi/24,travel)?.id===neighbor.id;
+    }
+   }
+   assert(canEnter,current.id+' -> '+neighbor.id+' is not selectable');
+  }
+ }
+ assert.equal(zoneCount,48);
+ assert.equal(edgeCount,94);
+});
+test('Mulgore opens The Barrens on the east and keeps its own center inactive',()=>{
+ const travel=require('../travel-data.js');
+ assert.equal(A.neighboringZoneAt(maps,'zone-mulgore',.85,.5,travel)?.id,'zone-barrens');
+ assert.equal(A.neighboringZoneAt(maps,'zone-mulgore',.80,.55,travel)?.id,'zone-barrens');
+ assert.equal(A.neighboringZoneAt(maps,'zone-mulgore',.5,.08,travel)?.id,'zone-thunder-bluff');
+ assert.equal(A.neighboringZoneAt(maps,'zone-mulgore',.5,.5,travel),null);
+});
+test('The Barrens also opens Ashenvale and Dustwallow Marsh at matching edges',()=>{
+ const travel=require('../travel-data.js');
+ assert.equal(A.neighboringZoneAt(maps,'zone-barrens',.52,.04,travel)?.id,'zone-ashenvale');
+ assert.equal(A.neighboringZoneAt(maps,'zone-barrens',.83,.86,travel)?.id,'zone-dustwallow-marsh');
+});

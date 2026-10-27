@@ -77,23 +77,25 @@
   }
   return [...ids].map(x=>maps[x]).sort((a,b)=>a.title.localeCompare(b.title));
  }
- // On zone maps without a traced neighbor outline, the outermost strip
- // offers directional navigation based on the adjacent land routes.
+ // Zone artwork often includes a narrow slice of the adjoining landscape.
+ // Use traced shapes first; on other zone maps, divide the outer area between
+ // confirmed walk-connected neighbours by their relative direction.
+ // Interior clicks stay on the current zone.
  function neighboringZoneAt(maps,parent,x,y,travel){
-  if(!maps[parent]?.zoneId||x<0||x>1||y<0||y>1)return null;
+  if(!maps[parent]?.zoneId||!Number.isFinite(x)||!Number.isFinite(y)||x<0||x>1||y<0||y>1)return null;
   const traced=zoneAt(maps,parent,x,y);
   if(traced)return traced;
-  if(zoneRegions[parent])return null;
   const dx=x-.5,dy=y-.5;
-  if(Math.max(Math.abs(dx),Math.abs(dy))<.34)return null;
-  const neighbors=adjacentZones(maps,parent,travel);
+  if(Math.max(Math.abs(dx),Math.abs(dy))<.26)return null;
+  const radius=Math.hypot(dx,dy);
   const center=maps[parent];
-  const candidates=neighbors.map(m=>{
-   const nx=m.x-center.x,ny=m.y-center.y;
-   const d=Math.hypot(nx,ny);
-   return {map:m,score:d?((dx*nx+dy*ny)/(Math.hypot(dx,dy)*d)):-1};
-  }).filter(entry=>entry.score>.65);
-  return candidates.sort((a,b)=>b.score-a.score)[0]?.map||null;
+  const options=adjacentZones(maps,parent,travel).map(m=>{
+   const nx=m.x-center.x,ny=m.y-center.y,d=Math.hypot(nx,ny);
+   return {map:m,score:d>0?(dx*nx+dy*ny)/(radius*d):-1};
+  }).sort((a,b)=>b.score-a.score||a.map.id.localeCompare(b.map.id));
+  // A zone's continent marker is not necessarily near the displayed
+  // border. Accept a wider angular area than the old 0.65 cutoff.
+  return options[0]?.score>=.42?options[0].map:null;
  }
  function zoomOutParent(maps,map,zoomLevel,factor){return factor<1&&zoomLevel<=1&&map.parent&&maps[map.parent]?map.parent:null;}
  // Save the map camera when entering a child map so returning restores it.

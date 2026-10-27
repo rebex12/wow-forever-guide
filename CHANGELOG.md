@@ -2,6 +2,13 @@
 
 This changelog tracks changes published to the GitHub repository. It is not displayed on the website.
 
+## 0.7.8 – 2026-10-27
+- **Zone-map navigation:** Fixed direct clicks from Mulgore into The Barrens. Neighboring zones now use a less restrictive, bearing-based edge hit area where a precise map polygon is unavailable. Existing traced regions continue to take priority. (`world-map.js`)
+- **Navigation coverage:** Verified that all 94 documented, same-continent walk connections between the 48 zone maps can be selected in both directions where recorded. Added systematic regression checks and specific cases for Mulgore, The Barrens, Ashenvale, and Dustwallow Marsh. (`tests/release05.test.cjs`)
+- **Appearance:** Dark / OLED is now the default theme for new users and profiles without a saved theme. Existing saved theme preferences are preserved; the initial document also uses Dark / OLED to prevent a forest-theme flash during startup. (`app.js`, `core.js`, `index.html`)
+- **Sidebar:** Increased spacing between wrapped character names and level/class details, and below the character card. (`v07.css`)
+- Updated version labels, offline cache, and documentation. (`app.js`, `index.html`, `sw.js`, `README.md`)
+
 ## 0.7.7 – 2026-10-27
 - **Character selector:** Show the full character name in the sidebar instead of truncating it with an ellipsis. Names such as **Shamanta Fox** wrap naturally onto multiple lines, and longer names expand the card vertically without overlapping the class icon or dropdown arrow. (`v07.css`)
 - **Accessibility:** Added a full-name hover tooltip to the character switcher. (`app.js`)

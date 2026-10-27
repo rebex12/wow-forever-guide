@@ -73,3 +73,12 @@ test('new characters have beginner mode off by default without changing saved ch
  const legacy={...enabled};delete legacy.beginner;
  assert.equal(C.normalise({schema:1,characters:[legacy]},catalog).characters[0].beginner,true);
 });
+
+test('Dark / OLED is the default for profiles without a theme, without overwriting saved themes',()=>{
+ const char=C.createBlankCharacter();
+ const base={schema:1,characters:[char],activeId:char.id};
+ assert.equal(C.normalise(base,catalog).settings.theme,'dark');
+ assert.equal(C.normalise({...base,settings:{theme:'forest'}},catalog).settings.theme,'forest');
+ assert.equal(C.normalise({...base,settings:{theme:'light'}},catalog).settings.theme,'light');
+ assert.equal(C.normalise({...base,settings:{theme:'dark'}},catalog).settings.theme,'dark');
+});
