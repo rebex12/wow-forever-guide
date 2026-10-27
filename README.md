@@ -4,6 +4,8 @@ Questbound is a personal leveling companion for World of Warcraft: Forever. Trac
 
 Questbound was created with the help of AI.
 
+New installations use Dark / OLED by default, without changing existing saved theme preferences. The map supports direct clicks on visible neighboring zones, with automated coverage for all documented same-continent walk connections.
+
 ## Characters and progress
 
 Start with an empty profile and create your own characters. Each profile keeps its level, completed quests, notes, builds, professions, profession skills, current zone, and assistance preferences. Race choices match the selected class and faction. Roles appear only when a class supports more than one. Choose up to two primary professions and all three secondary professions.
