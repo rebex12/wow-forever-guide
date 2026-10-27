@@ -44,6 +44,8 @@
  function mapNavigation(maps,current,target,view,history=[]){
   if(!current||!maps[target]||current.id===target)return {history,restore:null};
   if(maps[target].parent===current.id)return {history:[...history,{id:current.id,z:view.z,px:view.px,py:view.py}],restore:null};
+  // Switching between siblings keeps the parent's saved camera position.
+  if(current.parent&&maps[target].parent===current.parent&&history.at(-1)?.id===current.parent)return {history,restore:null};
   const index=history.findLastIndex(entry=>entry.id===target);
   return index>=0?{history:history.slice(0,index),restore:history[index]}:{history:[],restore:null};
  }
