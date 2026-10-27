@@ -17,7 +17,7 @@
   ],
   'zone-barrens':[
    // Stonetalon Mountains, separated from The Barrens by mountain ridges.
-   {id:'zone-stonetalon',poly:[[0,0],[.555,0],[.508,.084],[.454,.152],[.430,.230],[.401,.292],[.350,.348],[0,.348]]},
+   {id:'zone-stonetalon',poly:[[0,0],[.430,0],[.435,.060],[.413,.130],[.392,.194],[.394,.262],[.350,.348],[0,.348]]},
    // Mulgore occupies almost the entire open western side of the image.
    {id:'zone-mulgore',poly:[[0,.348],[.350,.348],[.405,.300],[.440,.359],[.466,.462],[.459,.583],[.433,.691],[.392,.765],[.342,.840],[0,.844]]},
    {id:'zone-thousand-needles',poly:[[0,.844],[.342,.840],[.392,.765],[.446,.835],[.480,1],[0,1]]},
