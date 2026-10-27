@@ -5,11 +5,35 @@
  const norm=s=>String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
  function search(maps,query){const q=norm(query);return !q?[]:Object.values(maps).filter(m=>[m.title,...m.places||[]].some(p=>norm(p).includes(q))).sort((a,b)=>Number(norm(b.title)===q)-Number(norm(a.title)===q)||a.title.localeCompare(b.title));}
  function nearest(maps,parent,x,y){return Object.values(maps).filter(m=>m.parent===parent&&Number.isFinite(m.x)&&Number.isFinite(m.y)).map(m=>({map:m,d:Math.hypot(m.x-x,m.y-y)})).sort((a,b)=>a.d-b.d)[0];}
- // Approximate zone hit areas avoid selecting a nearby marker across a border.
+ // Coordinates are normalized to each map image. Curated contours take
+ // priority over the continent's seamless nearest-zone fallback.
+ // The Barrens contours follow the neighboring areas visible in its map art.
  const zoneRegions={
   kalimdor:[
-   {id:'zone-barrens',poly:[[.500,.435],[.542,.435],[.572,.484],[.565,.555],[.556,.650],[.505,.656],[.488,.607],[.488,.537],[.494,.483]]},
-   {id:'zone-mulgore',poly:[[.434,.531],[.486,.530],[.488,.608],[.480,.650],[.435,.654]]}
+   {id:'zone-winterspring',poly:[[.528,.249],[.543,.225],[.570,.211],[.605,.208],[.637,.218],[.669,.242],[.662,.284],[.629,.307],[.588,.298],[.548,.290],[.522,.272]]},
+   {id:'zone-stonetalon',poly:[[.390,.370],[.449,.348],[.479,.380],[.487,.447],[.467,.489],[.413,.475],[.389,.429]]},
+   {id:'zone-barrens',poly:[[.491,.435],[.541,.427],[.574,.478],[.567,.558],[.557,.657],[.496,.657],[.487,.611],[.488,.534]]},
+   {id:'zone-mulgore',poly:[[.427,.527],[.483,.519],[.489,.607],[.481,.661],[.428,.660]]}
+  ],
+  'zone-barrens':[
+   // Stonetalon Mountains, separated from The Barrens by mountain ridges.
+   {id:'zone-stonetalon',poly:[[0,0],[.555,0],[.508,.084],[.454,.152],[.430,.230],[.401,.292],[.350,.348],[0,.348]]},
+   // Mulgore occupies almost the entire open western side of the image.
+   {id:'zone-mulgore',poly:[[0,.348],[.350,.348],[.405,.300],[.440,.359],[.466,.462],[.459,.583],[.433,.691],[.392,.765],[.342,.840],[0,.844]]},
+   {id:'zone-thousand-needles',poly:[[0,.844],[.342,.840],[.392,.765],[.446,.835],[.480,1],[0,1]]},
+   // Durotar is the land east of the Southfury River.
+   {id:'zone-durotar',poly:[[.637,0],[.791,0],[.777,.128],[.772,.245],[.781,.350],[.746,.407],[.675,.380],[.647,.309],[.626,.195]]}
+  ]
+ };
+ // Coarse coastline masks keep ocean clicks inactive, while allowing every
+ // land pixel to resolve to some zone even far from all zone markers.
+ const continentLand={
+  kalimdor:[
+   [[.377,.065],[.459,.063],[.472,.131],[.450,.153],[.376,.137]],
+   [[.438,.150],[.507,.143],[.573,.164],[.643,.187],[.671,.251],[.677,.342],[.658,.453],[.646,.512],[.620,.600],[.617,.714],[.586,.869],[.559,.960],[.447,.957],[.388,.889],[.367,.781],[.367,.626],[.371,.521],[.392,.399],[.412,.269]]
+  ],
+  eastern:[
+   [[.385,.086],[.509,.086],[.603,.107],[.642,.151],[.656,.258],[.631,.366],[.611,.465],[.609,.552],[.595,.648],[.590,.760],[.566,.850],[.530,.970],[.439,.964],[.416,.845],[.381,.759],[.386,.652],[.401,.538],[.380,.430],[.365,.286]]
   ]
  };
  function insidePoly(poly,x,y){
@@ -22,8 +46,22 @@
  }
  function zoneAt(maps,parent,x,y,maxDistance=.06){
   if(!Number.isFinite(x)||!Number.isFinite(y)||x<0||x>1||y<0||y>1)return null;
-  const hit=(zoneRegions[parent]||[]).find(r=>maps[r.id]?.parent===parent&&insidePoly(r.poly,x,y));
+  const hit=(zoneRegions[parent]||[]).find(r=>maps[r.id]&&insidePoly(r.poly,x,y));
   if(hit)return maps[hit.id];
+  if(continentLand[parent]){
+   if(!continentLand[parent].some(poly=>insidePoly(poly,x,y)))return null;
+   // Cities have tiny footprints; they must not steal clicks from surrounding
+   // open terrain simply because their center marker happens to be closer.
+   const children=Object.values(maps).filter(m=>m.parent===parent&&Number.isFinite(m.x)&&Number.isFinite(m.y));
+   const cities=new Set(['zone-thunder-bluff','zone-orgrimmar','zone-darnassus','zone-ironforge','zone-stormwind-city','zone-undercity']);
+   const city=children.filter(m=>cities.has(m.id)).map(m=>({map:m,d:Math.hypot(m.x-x,m.y-y)})).sort((a,b)=>a.d-b.d)[0];
+   if(city?.d<.013)return city.map;
+   const regular=children.filter(m=>!cities.has(m.id));
+   return regular.map(m=>({map:m,d:Math.hypot(m.x-x,m.y-y)})).sort((a,b)=>a.d-b.d)[0]?.map||null;
+  }
+  // The zone-map atlas uses explicit neighbor contours only, never
+  // proximity to another continent marker.
+  if(zoneRegions[parent])return null;
   const closest=nearest(maps,parent,x,y);
   return closest&&closest.d<=maxDistance?closest.map:null;
  }
@@ -39,6 +77,24 @@
   }
   return [...ids].map(x=>maps[x]).sort((a,b)=>a.title.localeCompare(b.title));
  }
+ // On zone maps without a traced neighbor outline, the outermost strip
+ // offers directional navigation based on the adjacent land routes.
+ function neighboringZoneAt(maps,parent,x,y,travel){
+  if(!maps[parent]?.zoneId||x<0||x>1||y<0||y>1)return null;
+  const traced=zoneAt(maps,parent,x,y);
+  if(traced)return traced;
+  if(zoneRegions[parent])return null;
+  const dx=x-.5,dy=y-.5;
+  if(Math.max(Math.abs(dx),Math.abs(dy))<.34)return null;
+  const neighbors=adjacentZones(maps,parent,travel);
+  const center=maps[parent];
+  const candidates=neighbors.map(m=>{
+   const nx=m.x-center.x,ny=m.y-center.y;
+   const d=Math.hypot(nx,ny);
+   return {map:m,score:d?((dx*nx+dy*ny)/(Math.hypot(dx,dy)*d)):-1};
+  }).filter(entry=>entry.score>.65);
+  return candidates.sort((a,b)=>b.score-a.score)[0]?.map||null;
+ }
  function zoomOutParent(maps,map,zoomLevel,factor){return factor<1&&zoomLevel<=1&&map.parent&&maps[map.parent]?map.parent:null;}
  // Save the map camera when entering a child map so returning restores it.
  function mapNavigation(maps,current,target,view,history=[]){
@@ -53,7 +109,7 @@
  function render({data,language='en',initial='world',currentZone='',journeyHTML=''}){
   const sv=language==='sv',t=(en,se)=>sv?se:en,maps=data.maps,map=maps[initial]||maps.world;
   const options=Object.values(maps).sort((a,b)=>a.title.localeCompare(b.title));
-  return `<section class="atlas" data-current-zone="${esc(currentZone)}"><div class="atlas-toolbar"><label class="atlas-search-label"><span>${t('Find a zone or place','Hitta zon eller plats')}</span><input id="atlas-search" type="search" autocomplete="off" placeholder="${t('Zone, city or subzone…','Zon, stad eller subzon…')}" aria-controls="atlas-results"></label><label><span>${t('Map','Karta')}</span><select id="atlas-select" aria-label="${t('Choose map','Välj karta')}">${options.map(m=>`<option value="${esc(m.id)}" ${m.id===map.id?'selected':''}>${esc(m.title)}</option>`).join('')}</select></label>${currentZone&&maps[currentZone]?`<button class="secondary-button" data-atlas="my-zone">${t('My zone','Min zon')}</button>`:''}</div><div class="atlas-results" id="atlas-results" aria-live="polite" hidden></div><nav class="atlas-breadcrumb" aria-label="${t('Map hierarchy','Karthierarki')}"></nav><div class="atlas-frame"><div class="atlas-title"><span>✦</span><h2 id="atlas-title">${esc(map.title)}</h2><span>✦</span></div><div class="atlas-viewport" tabindex="0" role="group" aria-label="${t('Interactive map. Drag or use arrow keys to pan. Plus and minus zoom.','Interaktiv karta. Dra eller använd piltangenter för att panorera. Plus och minus zoomar.')}"><div class="atlas-plane"><img class="atlas-image" src="${esc(map.image)}" alt="${esc(map.title)}" draggable="false"><div class="atlas-spots"></div></div></div><div class="atlas-bottom"><span class="atlas-status" aria-live="polite"></span><div class="atlas-zoom"><button data-atlas="out" aria-label="${t('Zoom out','Zooma ut')}">−</button><button data-atlas="fit">${t('Fit','Anpassa')}</button><button data-atlas="in" aria-label="${t('Zoom in','Zooma in')}">+</button><button data-atlas="expand">${t('Expand','Förstora')}</button></div></div></div><div class="atlas-zone-actions"></div><nav class="atlas-neighbors" aria-label="${t('Adjacent zones','Angränsande zoner')}"></nav><p class="atlas-help">${t('Choose a continent, then a zone. Drag to move; pinch, use the wheel or + / − to zoom. On desktop, zoom near a zone marker or click the zone to open it. On mobile, pinch only changes magnification: tap a zone to open it. Use adjacent-zone buttons to switch between neighboring maps.','Välj en kontinent och sedan en zon. Dra för att flytta; nyp, använd mushjulet eller + / − för zoom. På datorn kan du zooma nära en zonmarkör eller klicka i zonen för att öppna den. På mobil zoomar nypgester bara kartbilden: tryck på zonen för att öppna den. Byt till angränsande zoner med knapparna.')}</p><p class="atlas-credit">${t('Map art','Kartbilder')} © Blizzard Entertainment · Forever · ${t('Zone maps need internet the first time; opened maps are saved for offline use.','Zonkartor behöver internet första gången; öppnade kartor sparas för offlinebruk.')}${data.source?` · ${t('Beta map art may change','Kartbilder från betan kan ändras')}`:''}</p>${journeyHTML}</section>`;
+  return `<section class="atlas" data-current-zone="${esc(currentZone)}"><div class="atlas-toolbar"><label class="atlas-search-label"><span>${t('Find a zone or place','Hitta zon eller plats')}</span><input id="atlas-search" type="search" autocomplete="off" placeholder="${t('Zone, city or subzone…','Zon, stad eller subzon…')}" aria-controls="atlas-results"></label><label><span>${t('Map','Karta')}</span><select id="atlas-select" aria-label="${t('Choose map','Välj karta')}">${options.map(m=>`<option value="${esc(m.id)}" ${m.id===map.id?'selected':''}>${esc(m.title)}</option>`).join('')}</select></label>${currentZone&&maps[currentZone]?`<button class="secondary-button" data-atlas="my-zone">${t('My zone','Min zon')}</button>`:''}</div><div class="atlas-results" id="atlas-results" aria-live="polite" hidden></div><nav class="atlas-breadcrumb" aria-label="${t('Map hierarchy','Karthierarki')}"></nav><div class="atlas-frame"><div class="atlas-title"><span>✦</span><h2 id="atlas-title">${esc(map.title)}</h2><span>✦</span></div><div class="atlas-viewport" tabindex="0" role="group" aria-label="${t('Interactive map. Drag or use arrow keys to pan. Plus and minus zoom.','Interaktiv karta. Dra eller använd piltangenter för att panorera. Plus och minus zoomar.')}"><div class="atlas-plane"><img class="atlas-image" src="${esc(map.image)}" alt="${esc(map.title)}" draggable="false"><div class="atlas-spots"></div></div></div><div class="atlas-bottom"><span class="atlas-status" aria-live="polite"></span><div class="atlas-zoom"><button data-atlas="out" aria-label="${t('Zoom out','Zooma ut')}">−</button><button data-atlas="fit">${t('Fit','Anpassa')}</button><button data-atlas="in" aria-label="${t('Zoom in','Zooma in')}">+</button><button data-atlas="expand">${t('Expand','Förstora')}</button></div></div></div><div class="atlas-zone-actions"></div><p class="atlas-help">${t('Choose a continent, then a zone. Drag to move; pinch, use the wheel or + / − to zoom. On desktop, zoom near a zone marker or click the zone to open it. On mobile, pinch only changes magnification: tap a zone to open it. Tap or click a neighboring region on a zone map to open it.','Välj en kontinent och sedan en zon. Dra för att flytta; nyp, använd mushjulet eller + / − för zoom. På datorn kan du zooma nära en zonmarkör eller klicka i zonen för att öppna den. På mobil zoomar nypgester bara kartbilden: tryck på zonen för att öppna den. Tryck eller klicka på en angränsande zon direkt i kartbilden för att öppna den.')}</p><p class="atlas-credit">${t('Map art','Kartbilder')} © Blizzard Entertainment · Forever · ${t('Zone maps need internet the first time; opened maps are saved for offline use.','Zonkartor behöver internet första gången; öppnade kartor sparas för offlinebruk.')}${data.source?` · ${t('Beta map art may change','Kartbilder från betan kan ändras')}`:''}</p>${journeyHTML}</section>`;
  }
  function mount(root,{data,language='en',initial='world',onView=()=>{},onChoose=()=>{},showSources=false}){
   if(!root)return;if(resizeObserver)resizeObserver.disconnect();const maps=data.maps,sv=language==='sv',t=(a,b)=>sv?b:a,$=s=>root.querySelector(s);
@@ -66,15 +122,13 @@
    const trail=[];let m=map;while(m){trail.unshift(m);m=maps[m.parent];}
    $('.atlas-breadcrumb').innerHTML=trail.map((m,i)=>`<button data-map-id="${esc(m.id)}" ${i===trail.length-1?'aria-current="page"':''}>${esc(m.title)}</button>`).join('<span aria-hidden="true">›</span>');
    $('.atlas-spots').innerHTML=Object.values(maps).filter(m=>m.parent===map.id&&Number.isFinite(m.x)).map(m=>`<button class="atlas-spot ${map.id==='world'?'continent-spot':''}" style="left:${m.x*100}%;top:${m.y*100}%" data-map-id="${esc(m.id)}" aria-label="${t('Open','Öppna')} ${esc(m.title)}"><span class="atlas-dot">◆</span><span class="atlas-spot-name">${esc(m.title)}</span></button>`).join('');
-   const neighbors=adjacentZones(maps,map.id,typeof window!=='undefined'?window.TRAVEL_DATA:null);
-   $('.atlas-neighbors').innerHTML=neighbors.length?`<strong>${t('Adjacent zones','Angränsande zoner')}</strong><div>${neighbors.map(m=>`<button type="button" data-map-id="${esc(m.id)}" aria-label="${t('Open','Öppna')} ${esc(m.title)}">${esc(m.title)}</button>`).join('')}</div>`:'';
    $('.atlas-zone-actions').innerHTML=map.zoneId?`<div><strong>${esc(map.title)}</strong><span>${t('Explore this zone or use it for Overview tips.','Utforska zonen eller välj den för tips i Overview.')}</span></div><button class="primary-button" data-atlas="choose-zone">${t('I am here · show tips','Jag är här · visa tips')}</button>`:map.parent&&map.parent!=='world'?`<p class="small">${t('Map view available. Zone guidance is still being mapped.','Kartvy tillgänglig. Zonguiden kartläggs fortfarande.')}</p>`:'';
    layout();if(notify)onView(map.id);
   }
   function zoom(factor,x=vw/2,y=vh/2,autoOpen=false){
    const parent=zoomOutParent(maps,map,z,factor);if(parent){choose(parent);return;}
    const next=Math.max(1,Math.min(4,z*factor)),u=(x-(vw-bw*z)/2-px)/(bw*z),v=(y-(vh-bh*z)/2-py)/(bh*z);
-   const candidate=autoOpen?zoneAt(maps,map.id,u,v,.045):null;if(factor>1&&next>=2.5&&candidate){choose(candidate.id);return;}
+   const candidate=autoOpen&&!map.zoneId?zoneAt(maps,map.id,u,v,.045):null;if(factor>1&&next>=2.5&&candidate){choose(candidate.id);return;}
    px=x-u*bw*next-(vw-bw*next)/2;py=y-v*bh*next-(vh-bh*next)/2;z=next;paint();
   }
   root.addEventListener('click',e=>{
@@ -115,7 +169,7 @@
    if(suppressClick||e.target.closest('button'))return;
    const r=vp.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
    const u=(x-(vw-bw*z)/2-px)/(bw*z),v=(y-(vh-bh*z)/2-py)/(bh*z);
-   const hit=zoneAt(maps,map.id,u,v,.065);
+   const hit=map.zoneId?neighboringZoneAt(maps,map.id,u,v,typeof window!=='undefined'?window.TRAVEL_DATA:null):zoneAt(maps,map.id,u,v,.065);
    if(hit)choose(hit.id);
   });
   vp.addEventListener('dblclick',e=>{if(suppressClick)return;const r=vp.getBoundingClientRect();zoom(1.5,e.clientX-r.left,e.clientY-r.top);});
@@ -126,5 +180,5 @@
   if(showSources&&data.source){const p=document.createElement('p');p.className='small';const a=document.createElement('a');a.href=data.source;a.textContent=t('Map source','Kartkälla');a.target='_blank';a.rel='noopener noreferrer';p.append(a);root.append(p);}
   return {choose};
  }
- return {search,nearest,zoneAt,adjacentZones,bounds,zoomOutParent,mapNavigation,render,mount};
+ return {search,nearest,zoneAt,adjacentZones,neighboringZoneAt,bounds,zoomOutParent,mapNavigation,render,mount};
 });
