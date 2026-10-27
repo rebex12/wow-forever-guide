@@ -77,3 +77,12 @@ test('new bilingual screens escape saved names and keep source links optional',(
 test('map-first order places the journey planner below all map controls',()=>{
  const M=require('../world-map.js'),window={};vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../map-data.js'),'utf8'),{window});const html=M.render({data:window.WORLD_MAP_DATA,journeyHTML:'<div id="gps-proof"></div>'});assert(html.indexOf('gps-proof')>html.indexOf('atlas-credit'));assert(html.indexOf('gps-proof')>html.indexOf('atlas-viewport'));
 });
+
+test('remounting a page replaces handlers so goal clicks and saves run exactly once',()=>{
+ const listeners=new Map(),root={addEventListener(n,f){if(!listeners.has(n))listeners.set(n,new Set());listeners.get(n).add(f);},removeEventListener(n,f){listeners.get(n)?.delete(f);}},profile=C.createCharacter();let saves=0;
+ const opts={profile,data:{quests:[]},crafts:[],catalog:{},travel:D,language:'en',save:()=>saves++,render:()=>A.mount(root,opts),go(){},done:C.questDone,available:Q.available,matches:C.matchesCharacter};
+ for(let i=0;i<8;i++)A.mount(root,opts);assert.equal(listeners.get('click').size,1);assert.equal(listeners.get('change').size,1);
+ const button={dataset:{companion:'pin',kind:'quest',id:'test'}},event={target:{closest:()=>button}};
+ [...listeners.get('click')][0](event);assert.equal(profile.companion.goals.length,1);assert.equal(saves,1);assert.equal(listeners.get('click').size,1);
+ [...listeners.get('click')][0](event);assert.equal(profile.companion.goals.length,0);assert.equal(saves,2);
+});
