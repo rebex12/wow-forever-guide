@@ -5,6 +5,7 @@
  const norm=s=>String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
  function search(maps,query){const q=norm(query);return !q?[]:Object.values(maps).filter(m=>[m.title,...m.places||[]].some(p=>norm(p).includes(q))).sort((a,b)=>Number(norm(b.title)===q)-Number(norm(a.title)===q)||a.title.localeCompare(b.title));}
  function nearest(maps,parent,x,y){return Object.values(maps).filter(m=>m.parent===parent&&Number.isFinite(m.x)&&Number.isFinite(m.y)).map(m=>({map:m,d:Math.hypot(m.x-x,m.y-y)})).sort((a,b)=>a.d-b.d)[0];}
+ function zoomOutParent(maps,map,zoomLevel,factor){return factor<1&&zoomLevel<=1&&map.parent&&maps[map.parent]?map.parent:null;}
  function bounds(pan,viewport,size,zoom){const limit=Math.max(0,(size*zoom-viewport)/2);return limit===0?0:Math.max(-limit,Math.min(limit,pan));}
  function render({data,language='en',initial='world',currentZone='',journeyHTML=''}){
   const sv=language==='sv',t=(en,se)=>sv?se:en,maps=data.maps,map=maps[initial]||maps.world;
@@ -26,6 +27,7 @@
    layout();if(notify)onView(map.id);
   }
   function zoom(factor,x=vw/2,y=vh/2){
+   const parent=zoomOutParent(maps,map,z,factor);if(parent){choose(parent);return;}
    const next=Math.max(1,Math.min(4,z*factor)),u=(x-(vw-bw*z)/2-px)/(bw*z),v=(y-(vh-bh*z)/2-py)/(bh*z);
    const candidate=nearest(maps,map.id,u,v);if(factor>1&&next>=2.5&&candidate&&candidate.d<.18){choose(candidate.map.id);return;}
    px=x-u*bw*next-(vw-bw*next)/2;py=y-v*bh*next-(vh-bh*next)/2;z=next;paint();
@@ -62,5 +64,5 @@
   if(showSources&&data.source){const p=document.createElement('p');p.className='small';const a=document.createElement('a');a.href=data.source;a.textContent=t('Map source','Kartkälla');a.target='_blank';a.rel='noopener noreferrer';p.append(a);root.append(p);}
   return {choose};
  }
- return {search,nearest,bounds,render,mount};
+ return {search,nearest,bounds,zoomOutParent,render,mount};
 });

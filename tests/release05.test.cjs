@@ -33,3 +33,13 @@ test('atlas search matches subzones, cities, punctuation and both continents wit
 test('craft suggestions carry distinct persistent IDs and sourced item equip levels when documented',()=>{
  const c=C.createCharacter({classId:'shaman',role:'DPS',professions:['Leatherworking']}),items=P.suggestions(c,null,db);assert(items.length>=2);assert(items.every(g=>g.id.startsWith('craft-leatherworking-')));const glove=items.find(g=>g.name==='Toughened Leather Gloves');assert.equal(glove.equipLevel,22);assert.equal(glove.itemId,4253);assert.equal(items.find(g=>g.name==='Skirmisher’s Leather Belt').equipLevel,30);assert.equal(new Set(items.map(g=>g.id)).size,items.length);
 });
+
+test('zooming out at minimum zoom navigates to the parent map, never past the world',()=>{
+ const W=require('../world-map.js');
+ const maps={world:{id:'world'},continent:{id:'continent',parent:'world'},zone:{id:'zone',parent:'continent'}};
+ assert.equal(W.zoomOutParent(maps,maps.zone,1,1/1.18),'continent');
+ assert.equal(W.zoomOutParent(maps,maps.continent,1,1/1.5),'world');
+ assert.equal(W.zoomOutParent(maps,maps.world,1,1/1.18),null);
+ assert.equal(W.zoomOutParent(maps,maps.zone,1.4,1/1.18),null);
+ assert.equal(W.zoomOutParent(maps,maps.zone,1,1.18),null);
+});

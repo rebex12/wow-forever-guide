@@ -2,6 +2,10 @@
 
 Alla ändringar nedan finns i GitHub-repot. Changeloggen visas inte på webbplatsen.
 
+## 0.7.3 – 2026-10-27
+- **World Map:** Det går nu att zooma ut från en zon med mushjul, nypgest eller minustangenten. När zonen är på 100 % öppnas dess överordnade kontinentkarta, och därefter kan man zooma vidare till världskartan. (`world-map.js`)
+- Uppdaterade version och offline-cache så kartändringen hämtas utan att gammal kod ligger kvar. (`app.js`, `index.html`, `sw.js`)
+
 ## 0.7.2 – 2026-10-27
 - **Overview:** Aktivitetsfiltret ligger nu till höger, bredvid ”Show completed”, i stället för mitt på skärmen. Flikarna ”Current”, ”Upcoming”, ”All” och ”Skipped” ligger kvar till vänster. Mobilanpassningen behålls. (`v07.css`)
 - **Inställningar:** Beginner Mode är avstängt som standard när en ny karaktär skapas. Befintliga karaktärers val ändras inte, och läget kan fortfarande aktiveras manuellt. (`core.js`, `tests/core.test.cjs`)
