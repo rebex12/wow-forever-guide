@@ -18,6 +18,16 @@ Import builds from Wowhead's Forever calculator. A link with a saved point order
 
 Compact talent trees use game backgrounds, icons, real row and column positions, rank counters, and prerequisite arrows. Current and next talent points are highlighted. Hover or focus a talent for rank effects, or tap it to open details. Game names and effect text remain in English.
 
+Create talent builds directly in Questbound, with up to 51 points, prerequisite checks, and an automatically recorded leveling order. Desktop controls use hover for descriptions, click to add a point, and right-click to remove one. On touch screens, the first tap selects the talent and shows its description; another tap adds a point, and holding the selected talent removes one. Existing imported builds can be edited as a separate copy.
+
+In the talent calculator, talents that can receive a point are shown in full color with a green border, including at rank zero. Locked talents remain gray and their tooltips explain the missing requirement. Talents at maximum rank use gold borders.
+
+## World map and journeys
+
+The interactive world atlas uses Forever game artwork for Azeroth, both continents, and 50 zone and city maps. Search zones and known places, drag to pan, pinch or scroll to zoom, and select a zone for Overview tips. The world and continent maps are bundled; individual zone maps require an internet connection on first opening and are then cached for offline use. Subzone names remain those printed on the game maps.
+
+The world map includes a simple journey planner. Enter a start and destination using zone, city, town or known subzone names. Select a faction to get suggested road and public-transport steps, including boats, zeppelins, skyboats and the Deeprun Tram. The planner respects the one-way Menethil–Southshore–Auberdine boat loop, warns about high-level areas and hostile settlements, and lets you open the area for any step on the map. Journey fields are saved separately for each profile. Directions describe zone transitions and known transport stops; use the game map for local turns and preliminary approaches.
+
 ## Quests and dungeons
 
 Browse selected class and reward questlines across 48 mapped zones. Rewards include weapons, armor, bags, utility items, collectibles, unlocks, and quest money. Cozy Sleeping Bag is recommended from level 20; its minimum start level of 14 is listed separately.
@@ -34,6 +44,8 @@ Fishing itself consumes no crafting materials for skill points. Its guide distin
 
 Crafted equipment suggestions match class, role, active build, and selected professions. The documented selection covers current level-30 class guides for all nine classes; it is not a complete endgame ranking. Unconfirmed recipe requirements are left for the player to check rather than guessed.
 
+Overview includes crafted equipment suggestions alongside quests and milestones, with profession, build, documented equip level, and known recipe-skill requirements taken into account. Mark a suggestion complete after crafting or considering it. Missing requirements are labeled for checking against the recipe.
+
 ## Reference and settings
 
 Search quests, zones, abilities, talents, and controller functions. The controller reference includes Xbox, PlayStation, and generic button names and is based on a pinned revision of the Forever client UI source. Follow the game's prompts when controls differ.
@@ -49,10 +61,3 @@ Profiles are saved in the browser. Export and import JSON backups to move them b
 Questbound contains a documented selection, not a complete quest database or leveling route. Detailed provenance and coverage limits are recorded in [SOURCES.md](SOURCES.md).
 
 Questbound is an unofficial companion. World of Warcraft, game names, artwork, and in-game descriptions belong to Blizzard Entertainment.
-
-
-The interactive world atlas uses Forever game artwork for Azeroth, both continents, and 50 zone and city maps. Search zones and known places, drag to pan, pinch or scroll to zoom, and select a zone for Overview tips. The world and continent maps are bundled; individual zone maps require an internet connection on first opening and are then cached for offline use. Subzone names remain those printed on the game maps.
-
-Create talent builds directly in Questbound, with up to 51 points, prerequisite checks, and an automatically recorded leveling order. Desktop controls use hover for descriptions, click to add a point, and right-click to remove one. On touch screens, the first tap selects the talent and shows its description; another tap adds a point, and holding the selected talent removes one. Existing imported builds can be edited as a separate copy.
-
-Overview includes crafted equipment suggestions alongside quests and milestones, with profession, build, documented equip level, and known recipe-skill requirements taken into account. Mark a suggestion complete after crafting or considering it. Missing requirements are labeled for checking against the recipe.

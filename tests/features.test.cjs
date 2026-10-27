@@ -62,8 +62,8 @@ function app(){
   const element=s=>{if(!elements.has(s))elements.set(s,{innerHTML:'',textContent:'',value:'',hidden:false,dataset:{},style:{},getBoundingClientRect:()=>({width:300,height:240,left:8,right:308,top:8,bottom:248}),classList:{toggle(){},add(){},remove(){}},setAttribute(){},removeAttribute(){},addEventListener(){},focus(){},close(){this.open=false},showModal(){this.open=true}});return elements.get(s);};
   const document={querySelector:element,querySelectorAll:()=>[],addEventListener:(n,f)=>{events[n]=f;(listeners[n]||=[]).push(f);},documentElement:{dataset:{}},body:{classList:{toggle(){}}}};
   const window={addEventListener(){},scrollTo(){},isSecureContext:false,innerWidth:390,innerHeight:800,scrollY:0};const storage=new Map();const context={window,document,location:{hash:'',protocol:'http:'},history:{replaceState(){},pushState(){}},navigator:{onLine:true},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},getComputedStyle:()=>({getPropertyValue:()=> '#000'}),URL,console,setTimeout:(fn,ms)=>{const id=++timerId;timers.set(id,{fn,ms});return id;},clearTimeout:id=>timers.delete(id)};
-  vm.createContext(context);for(const f of ['i18n.js','locales.js','catalog.js','content.js','core.js','guide-tools.js','zone-data.js','controller-data.js','character-rules.js','game-assets.js','quest-chains.js','release-content.js','talent-text.js','profession-planner.js','talent-editor.js','map-data.js','world-map.js'])vm.runInContext(file(f),context);
-  vm.runInContext(file('app.js').replace('  fillIcons();', '  window.testAPI={state,character,go,settings,renderShell,renderContent,searchPage,questCard,zoneCard,overview,controllerPage,actionableItems,summary,builtIn,talents,goBack,sourceLine,dungeonCard,zoneGuide,talentInfo,showTalentTooltip,hideTalentTooltip,professionsPage,professionMaterials,professionGear,craftTasks,craftTaskCard,worldMapPage,releaseAction};\n  fillIcons();'),context);
+  vm.createContext(context);for(const f of ['i18n.js','locales.js','catalog.js','content.js','core.js','guide-tools.js','zone-data.js','controller-data.js','character-rules.js','game-assets.js','quest-chains.js','release-content.js','talent-text.js','profession-planner.js','talent-editor.js','map-data.js','travel-data.js','travel-planner.js','world-map.js'])vm.runInContext(file(f),context);
+  vm.runInContext(file('app.js').replace('  fillIcons();', '  window.testAPI={state,character,go,settings,renderShell,renderContent,searchPage,questCard,zoneCard,overview,controllerPage,actionableItems,summary,builtIn,talents,goBack,sourceLine,dungeonCard,zoneGuide,talentInfo,showTalentTooltip,hideTalentTooltip,professionsPage,professionMaterials,professionGear,craftTasks,craftTaskCard,worldMapPage,releaseAction,talentAvailability};\n  fillIcons();'),context);
   return {api:window.testAPI,element,document,events,storage,listeners,timers};
 }
 test('every page renders in both languages and preserves user-written notes',()=>{
@@ -202,4 +202,20 @@ test('touch calculator selects before adding and consumes the click after a long
  await emit('pointerdown');await emit('pointerup');await emit('click');assert.equal(E.total(b),1,'second tap adds once');
  await emit('pointerdown');const hold=[...a.timers.values()].find(t=>t.ms===550);assert(hold);hold.fn();await emit('pointerup');await emit('click');assert.equal(E.total(b),0,'long press removes without the release click adding it back');
  await emit('pointerdown');await emit('pointermove',{...event,clientX:140});assert(![...a.timers.values()].some(t=>t.ms===550),'scroll movement cancels hold');
+});
+
+test('calculator distinguishes available rank-zero talents, locked rows, full ranks and total budget',()=>{
+ const a=app(),c=a.api.character(),E=require('../talent-editor.js'),db=data().FOREVER_CATALOG;
+ for(const classId of Object.keys(db.classes)){
+ Object.assign(c,C.createCharacter({classId,level:60}),{blank:false});const b={id:'availability-'+classId,name:'Available',classId,calculator:true,allocations:E.empty(classId,db),order:[],startLevel:10};c.builds=[b];c.activeBuild=b.id;a.api.go('talents');a.api.releaseAction({dataset:{action:'edit-talents'}},{});
+ const t=db.classes[classId].trees[0],root=t.talents.findIndex(t=>t.required===0&&!t.requires.length),deep=t.talents.findIndex(t=>t.required>0);
+ assert.equal(a.api.talentAvailability(0,root).state,'available');assert.equal(a.api.talentAvailability(0,deep).state,'locked');let html=a.api.talents();assert(html.includes('talent-available'));assert(html.includes('talent-locked'));assert(html.includes('data-availability="available"'));assert(html.includes('0/'+t.talents[root].max));assert(a.api.talentInfo(0,deep).includes('more points in earlier rows'));
+ for(let i=0;i<t.talents[root].max;i++)assert(E.add(b,db,0,root).ok);assert.equal(a.api.talentAvailability(0,root).state,'maxed');assert(a.api.talents().includes('talent-maxed'));
+ while(E.total(b)<51){let found=false;for(let ti=0;ti<3&&!found;ti++)for(let i=0;i<b.allocations[ti].length;i++)if(E.add(b,db,ti,i).ok){found=true;break;}assert(found);}
+ for(let ti=0;ti<3;ti++)for(let i=0;i<b.allocations[ti].length;i++)assert.notEqual(a.api.talentAvailability(ti,i).state,'available');
+ }
+});
+
+test('world map exposes the journey planner in both languages without requiring a configured character',()=>{
+ const a=app();for(const language of ['en','sv']){a.api.state.settings.language=language;a.api.go('world-map');const html=a.element('#content').innerHTML;assert(html.includes('id="journey-from"'));assert(html.includes('id="journey-to"'));assert(html.includes('journey-faction'));assert(!html.includes('undefined'));}
 });

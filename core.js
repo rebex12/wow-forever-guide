@@ -35,6 +35,7 @@
       },
       beginner: true,
       helpLevel: clamp(values.helpLevel ?? 2, 1, 4),
+      journey: normaliseJourney(values.journey),
       atlasMap: clean(values.atlasMap || 'world', 100),
       currentZone: clean(values.currentZone || '', 100),
       currentPlace: clean(values.currentPlace || '', 100),
@@ -42,6 +43,7 @@
       compact: false
     };
   }
+  function normaliseJourney(v={}){v=v&&typeof v==='object'?v:{};return {from:clean(v.from||'',100),to:clean(v.to||'',100),faction:['Horde','Alliance'].includes(v.faction)?v.faction:'',transport:v.transport!==false,avoidEnemy:v.avoidEnemy!==false,planned:v.planned===true};}
   function normaliseProfessionSkills(values){const names=['Alchemy','Blacksmithing','Enchanting','Engineering','Herbalism','Leatherworking','Mining','Skinning','Tailoring','Cooking','First Aid','Fishing'];return Object.fromEntries(Object.entries(values&&typeof values==='object'?values:{}).filter(([name,value])=>names.includes(name)&&Number.isInteger(value)&&value>=1&&value<=300));}
   function createBlankCharacter() {
     return {
@@ -64,6 +66,7 @@
       ids.add(out.id);
       out.done = Object.fromEntries(Object.entries(c.done || {}).filter(([k, v]) => /^[a-zA-Z0-9_:.-]{1,180}$/.test(k) && v === true));
       out.notes = clean(c.notes, 20000);
+      out.journey=normaliseJourney(c.journey);out.atlasMap=clean(c.atlasMap||'world',100);
       out.beginner = c.beginner !== false;
       out.compact = !!c.compact;
       out.filters = {
