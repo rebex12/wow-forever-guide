@@ -79,7 +79,7 @@
   }
   root.addEventListener('click',e=>{
    const button=e.target.closest('button');if(!button)return;
-   if(button.dataset.mapId){if(!suppressClick)choose(button.dataset.mapId);$('#atlas-results').hidden=true;return;}
+   if(button.dataset.mapId){if(!vp.contains(button)||!suppressClick)choose(button.dataset.mapId);$('#atlas-results').hidden=true;return;}
    const a=button.dataset.atlas;if(a==='in')zoom(1.5);if(a==='out')zoom(1/1.5);if(a==='fit'){z=1;px=py=0;paint();}if(a==='my-zone')choose(root.dataset.currentZone);
    if(a==='choose-zone'&&map.zoneId)onChoose(map.zoneId);
    if(a==='expand'){root.classList.toggle('atlas-expanded');button.textContent=root.classList.contains('atlas-expanded')?t('Close','Stäng'):t('Expand','Förstora');layout();}

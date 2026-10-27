@@ -95,3 +95,8 @@ test('adjacent sibling navigation preserves the saved parent zoom',()=>{
  const out=A.mapNavigation(maps,maps.east,'continent',{z:1,px:0,py:0},sibling.history);
  assert.deepEqual(out.restore,{id:'continent',...original});
 });
+
+test('adjacent zone buttons are not disabled by a prior pinch gesture',()=>{
+ const code=fs.readFileSync(path.join(__dirname,'../world-map.js'),'utf8');
+ assert(code.includes('!vp.contains(button)||!suppressClick'));
+});
