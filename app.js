@@ -326,13 +326,13 @@
   }
   function heading() {
  const c=character(),n=nav.find(n=>n[0]===page)||nav[0];
- $('#page-heading').innerHTML=`<div class="heading-row"><button class="icon-button mobile-menu" data-action="menu" aria-label="${bi('Open menu','Öppna menyn')}">${utilityIcon('menu')}</button><button class="icon-button" id="back-button" data-action="back" aria-label="${bi('Back','Tillbaka')}" ${navTrail.length?'':'disabled'}>${utilityIcon('back')}</button><h1>${c.blank&&page!=='world-map'?bi('Create your character','Skapa din karaktär'):esc(L.t(n[1]))}</h1><button class="draft-badge" data-action="about">0.7.6</button></div>`;
+ $('#page-heading').innerHTML=`<div class="heading-row"><button class="icon-button mobile-menu" data-action="menu" aria-label="${bi('Open menu','Öppna menyn')}">${utilityIcon('menu')}</button><button class="icon-button" id="back-button" data-action="back" aria-label="${bi('Back','Tillbaka')}" ${navTrail.length?'':'disabled'}>${utilityIcon('back')}</button><h1>${c.blank&&page!=='world-map'?bi('Create your character','Skapa din karaktär'):esc(L.t(n[1]))}</h1><button class="draft-badge" data-action="about">0.7.7</button></div>`;
 }
   function renderShell() {
     applyPreferences();
     const c = character();
 
-    $('#sidebar-character').innerHTML = L.h`<button class="character-switch" data-action="characters" aria-label="${bi('Switch or manage character', 'Byt eller hantera karaktär')}">${avatar(c)}<span class="character-copy"><strong>${esc(c.name || bi('New character', 'Ny karaktär'))}</strong><small>${c.blank ? '—' : 'Level ' + c.level + ' · ' + esc(klass().name)}</small></span>${icon('chevron')}</button>`;
+    $('#sidebar-character').innerHTML = L.h`<button class="character-switch" data-action="characters" aria-label="${bi('Switch or manage character', 'Byt eller hantera karaktär')}">${avatar(c)}<span class="character-copy"><strong title="${esc(c.name || bi('New character', 'Ny karaktär'))}">${esc(c.name || bi('New character', 'Ny karaktär'))}</strong><small>${c.blank ? '—' : 'Level ' + c.level + ' · ' + esc(klass().name)}</small></span>${icon('chevron')}</button>`;
 
     const groups=[{title:null,ids:['overview']},{title:bi('Character','Karaktär'),ids:['talents','abilities','gear','professions','notes']},{title:bi('Adventure','Äventyr'),ids:['quests','dungeons','zones','world-map','zone-guide']},{title:bi('Help','Hjälp'),ids:['glossary','controller']}];
     $('#navigation').innerHTML=groups.map(g=>`${g.title?`<div class="nav-group-label" role="heading" aria-level="2">${g.title}</div>`:''}${g.ids.map(id=>{const [,name,ic]=nav.find(n=>n[0]===id);return `<button data-page="${id}" class="${page===id?'active':''}" ${page===id?'aria-current="page"':''}>${icon(ic)}${esc(L.t(name))}</button>`;}).join('')}`).join('');

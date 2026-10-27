@@ -86,3 +86,11 @@ test('remounting a page replaces handlers so goal clicks and saves run exactly o
  [...listeners.get('click')][0](event);assert.equal(profile.companion.goals.length,1);assert.equal(saves,1);assert.equal(listeners.get('click').size,1);
  [...listeners.get('click')][0](event);assert.equal(profile.companion.goals.length,0);assert.equal(saves,2);
 });
+
+test('sidebar character names wrap fully and expose the complete name on hover',()=>{
+ const css=fs.readFileSync(path.join(__dirname,'../v07.css'),'utf8');
+ const app=fs.readFileSync(path.join(__dirname,'../app.js'),'utf8');
+ assert.match(css,/\.sidebar-character \.character-copy strong\{[^}]*white-space:normal;[^}]*overflow-wrap:anywhere;/);
+ assert.match(css,/\.sidebar-character \.character-switch\{[^}]*height:auto;/);
+ assert(app.includes('class="character-copy"><strong title="'));
+});
