@@ -103,7 +103,7 @@
       settings: {
         language: raw.settings?.language === 'sv' ? 'sv' : 'en',
         showSourceLinks: raw.settings?.showSourceLinks === true,
-        theme: ['forest', 'dark', 'light', 'frost', 'parchment'].includes(raw.settings?.theme) ? raw.settings.theme : 'forest'
+        theme: ['forest', 'dark', 'light', 'frost', 'parchment'].includes(raw.settings?.theme) ? raw.settings.theme : 'dark'
       },
       characters,
       activeId: characters.some(c => c.id === raw.activeId) ? raw.activeId : characters[0].id,
