@@ -1,52 +1,52 @@
 # Questbound – Changelog
 
-Alla ändringar nedan finns i GitHub-repot. Changeloggen visas inte på webbplatsen.
+This changelog tracks changes published to the GitHub repository. It is not displayed on the website.
 
 ## 0.7.4 – 2026-10-27
-- **World Map:** Utzoomning från en zon återgår nu till den föregående kontinentvyn med samma zoomnivå och position, inte hela kontinenten. Fungerar med mushjul, nypgest, minusknapp och minustangent. (`world-map.js`)
-- **Mushjul:** Ett sammanhängande scrollande kan inte längre hoppa genom flera kartnivåer på en gång. (`world-map.js`)
-- Versionsnummer och offline-cache uppdaterade. (`app.js`, `index.html`, `sw.js`)
+- **World Map:** Zooming out of a zone now restores the previous continent view, including its zoom level and pan position, rather than resetting to the full continent. Works with the mouse wheel, pinch gestures, the zoom-out button, and the minus key. (`world-map.js`)
+- **Mouse wheel:** A single continuous scroll can no longer jump through multiple map levels. (`world-map.js`)
+- Updated the version number and offline cache. (`app.js`, `index.html`, `sw.js`)
 
 ## 0.7.3 – 2026-10-27
-- **World Map:** Det går nu att zooma ut från en zon med mushjul, nypgest eller minustangenten. När zonen är på 100 % öppnas dess överordnade kontinentkarta, och därefter kan man zooma vidare till världskartan. (`world-map.js`)
-- Uppdaterade version och offline-cache så kartändringen hämtas utan att gammal kod ligger kvar. (`app.js`, `index.html`, `sw.js`)
+- **World Map:** Added the ability to leave a zone map by zooming out with the mouse wheel, pinch gestures, or minus key. At 100% zoom, further zooming out opens the parent continent map; users can then continue to the world map. (`world-map.js`)
+- Updated the version number and offline cache to deliver the map fix without serving stale code. (`app.js`, `index.html`, `sw.js`)
 
 ## 0.7.2 – 2026-10-27
-- **Overview:** Aktivitetsfiltret ligger nu till höger, bredvid ”Show completed”, i stället för mitt på skärmen. Flikarna ”Current”, ”Upcoming”, ”All” och ”Skipped” ligger kvar till vänster. Mobilanpassningen behålls. (`v07.css`)
-- **Inställningar:** Beginner Mode är avstängt som standard när en ny karaktär skapas. Befintliga karaktärers val ändras inte, och läget kan fortfarande aktiveras manuellt. (`core.js`, `tests/core.test.cjs`)
-- Versionsnumret och offline-cachen är uppdaterade så att ändringarna hämtas i webbappen. (`app.js`, `index.html`, `sw.js`)
+- **Overview:** Moved the Activities filter to the right, next to "Show completed", instead of leaving it in the middle of the screen. The "Current", "Upcoming", "All", and "Skipped" tabs remain on the left, with responsive behavior preserved. (`v07.css`)
+- **Settings:** Beginner Mode is now disabled by default for newly created characters. Existing characters retain their saved preferences, and Beginner Mode can still be enabled manually. (`core.js`, `tests/core.test.cjs`)
+- Updated the version number and offline cache so the web app loads the changes. (`app.js`, `index.html`, `sw.js`)
 
 ## 0.7.1 – 2026-10-27
-- Flyttade ”To do now”-checklistan till direkt under karaktärens levelval på Overview.
-- Lade till **Skip**, **Undo skip** och vyn **Skipped** för uppgifter. Skippade uppgifter är inte avklarade, låser inte upp fortsättningsquests och sparas i backup.
-- Berör främst `app.js`, `core.js`, `v07.css` och testerna.
+- Moved the "To do now" checklist directly below the character's level selector on Overview.
+- Added **Skip**, **Undo skip**, and the **Skipped** view. Skipped tasks do not count as completed, do not unlock follow-up quests, and are preserved in backups.
+- Primarily updated `app.js`, `core.js`, `v07.css`, and related tests.
 
 ## 0.7.0 – 2026-10-27
-- Lade till personliga mål, materialinventering och planering av besök i städer för träning och questinlämning.
-- Utökade GPS/reseplaneringen med fler destinationer, instansentréer, flight paths och rutter både med och utan upplåsta flygpunkter.
-- Förbättrade offline-hanteringen och förebyggde dubbla händelsehanterare efter sidbyten.
+- Added personal goals, material inventory tracking, and town visit planning for training and quest turn-ins.
+- Expanded the journey planner with more destinations, instance entrances, flight paths, and routes with or without unlocked flight points.
+- Improved offline handling and prevented duplicate event handlers after navigating between pages.
 
 ## 0.6.0 – 2026-10-27
-- Förtydligade i talent-kalkylatorn vilka talents som kan väljas och vilka krav som saknas.
-- Lade till reseplanering på världskartan med vägledning för resor mellan platser.
+- Improved talent calculator indicators for available talents and unmet requirements.
+- Added a world map journey planner with travel guidance between locations.
 
 ## 0.5.0 – 2026-10-27
-- Lade till interaktiv världskarta med zoner, kartnavigering och sökning.
-- Lade till möjlighet att skapa och redigera talent-builds direkt i Questbound.
-- Lade till professionsrelaterade craftinguppgifter i Overview.
+- Added an interactive world map with zone maps, navigation, and search.
+- Added the ability to create and edit talent builds directly in Questbound.
+- Added profession-related crafting tasks to Overview.
 
 ## 0.4.0 – 2026-10-27
-- Förbättrade talents med beskrivningar, nivåer och tydligare information.
-- Lade till questkedjor, dungeonstöd och mer planering för professions.
-- Förbättrade hur offline-filer uppdateras efter nya versioner.
+- Improved talent details, rank information, and descriptions.
+- Added quest chains, dungeon support, and expanded profession planning.
+- Improved offline asset updates between releases.
 
 ## 0.3.0 – 2026-10-26
-- Lade till tomma karaktärsprofiler som användaren själv fyller i.
-- Förbättrade visningen av talents och vägledningen under leveling.
+- Added blank character profiles that players can fill in themselves.
+- Improved talent visualization and leveling guidance.
 
 ## 0.2.0 – 2026-10-26
-- Lade till språkval, teman, mer zonhjälp och referens för spelkontroller.
+- Added language selection, themes, expanded zone assistance, and a game controller reference.
 
 ## 0.1.0 – 2026-10-26
-- Första utkastet till levelingguiden, ursprungligen under arbetsnamnet **Färdväg**.
-- Lade grunden för karaktärsprofiler, quests och en webbapp avsedd för GitHub Pages.
+- Published the initial leveling guide draft, originally developed under the working name **Färdväg**.
+- Established the foundation for character profiles, quests, and a GitHub Pages web app.
