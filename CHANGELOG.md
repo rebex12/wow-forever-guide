@@ -2,6 +2,12 @@
 
 This changelog tracks changes published to the GitHub repository. It is not displayed on the website.
 
+## 0.7.5 – 2026-10-27
+- **World Map:** Improved zone selection around The Barrens and Mulgore. Desktop zoom now uses smaller, region-aware hit areas instead of picking whichever zone center happens to be closest; users can also click or tap a zone directly. (`world-map.js`)
+- **Mobile:** Pinching changes map magnification without automatically opening a zone. Tapping a zone marker or supported zone area opens the map; panning and pinching do not count as taps. (`world-map.js`)
+- **Nearby zones:** Added touch-friendly buttons for directly connected neighboring zones, using same-continent land connections. Switching to a neighboring zone preserves the previous continent camera position. (`world-map.js`, `v07.css`)
+- Updated the version number and offline cache. (`app.js`, `index.html`, `sw.js`)
+
 ## 0.7.4 – 2026-10-27
 - **World Map:** Zooming out of a zone now restores the previous continent view, including its zoom level and pan position, rather than resetting to the full continent. Works with the mouse wheel, pinch gestures, the zoom-out button, and the minus key. (`world-map.js`)
 - **Mouse wheel:** A single continuous scroll can no longer jump through multiple map levels. (`world-map.js`)
