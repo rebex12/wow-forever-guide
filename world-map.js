@@ -6,6 +6,13 @@
  function search(maps,query){const q=norm(query);return !q?[]:Object.values(maps).filter(m=>[m.title,...m.places||[]].some(p=>norm(p).includes(q))).sort((a,b)=>Number(norm(b.title)===q)-Number(norm(a.title)===q)||a.title.localeCompare(b.title));}
  function nearest(maps,parent,x,y){return Object.values(maps).filter(m=>m.parent===parent&&Number.isFinite(m.x)&&Number.isFinite(m.y)).map(m=>({map:m,d:Math.hypot(m.x-x,m.y-y)})).sort((a,b)=>a.d-b.d)[0];}
  function zoomOutParent(maps,map,zoomLevel,factor){return factor<1&&zoomLevel<=1&&map.parent&&maps[map.parent]?map.parent:null;}
+ // Save the map camera when entering a child map so returning restores it.
+ function mapNavigation(maps,current,target,view,history=[]){
+  if(!current||!maps[target]||current.id===target)return {history,restore:null};
+  if(maps[target].parent===current.id)return {history:[...history,{id:current.id,z:view.z,px:view.px,py:view.py}],restore:null};
+  const index=history.findLastIndex(entry=>entry.id===target);
+  return index>=0?{history:history.slice(0,index),restore:history[index]}:{history:[],restore:null};
+ }
  function bounds(pan,viewport,size,zoom){const limit=Math.max(0,(size*zoom-viewport)/2);return limit===0?0:Math.max(-limit,Math.min(limit,pan));}
  function render({data,language='en',initial='world',currentZone='',journeyHTML=''}){
   const sv=language==='sv',t=(en,se)=>sv?se:en,maps=data.maps,map=maps[initial]||maps.world;
@@ -14,12 +21,12 @@
  }
  function mount(root,{data,language='en',initial='world',onView=()=>{},onChoose=()=>{},showSources=false}){
   if(!root)return;if(resizeObserver)resizeObserver.disconnect();const maps=data.maps,sv=language==='sv',t=(a,b)=>sv?b:a,$=s=>root.querySelector(s);
-  let map=maps[initial]||maps.world,z=1,px=0,py=0,bw=1,bh=1,vw=1,vh=1,gesture=null,suppressClick=false;
+  let map=maps[initial]||maps.world,z=1,px=0,py=0,bw=1,bh=1,vw=1,vh=1,gesture=null,suppressClick=false,history=[],lastWheelAt=0,wheelOutLocked=false;
   const vp=$('.atlas-viewport'),plane=$('.atlas-plane'),img=$('.atlas-image'),points=new Map();
   function layout(){vw=vp.clientWidth;vh=vp.clientHeight;const ratio=map.width/map.height;bw=Math.min(vw,vh*ratio);bh=bw/ratio;paint();}
   function paint(){px=bounds(px,vw,bw,z);py=bounds(py,vh,bh,z);plane.style.width=bw+'px';plane.style.height=bh+'px';plane.style.left=((vw-bw*z)/2+px)+'px';plane.style.top=((vh-bh*z)/2+py)+'px';plane.style.transform=`scale(${z})`;root.style.setProperty('--atlas-scale',z);$('.atlas-status').textContent=map.title+' · '+Math.round(z*100)+'%';}
   function choose(id,notify=true){
-   if(!maps[id])return;map=maps[id];z=1;px=py=0;points.clear();gesture=null;img.src=map.image;img.alt=map.title;$('#atlas-title').textContent=map.title;$('#atlas-select').value=map.id;
+   if(!maps[id])return;const nav=mapNavigation(maps,map,id,{z,px,py},history);history=nav.history;map=maps[id];z=nav.restore?.z??1;px=nav.restore?.px??0;py=nav.restore?.py??0;points.clear();gesture=null;img.src=map.image;img.alt=map.title;$('#atlas-title').textContent=map.title;$('#atlas-select').value=map.id;
    const trail=[];let m=map;while(m){trail.unshift(m);m=maps[m.parent];}
    $('.atlas-breadcrumb').innerHTML=trail.map((m,i)=>`<button data-map-id="${esc(m.id)}" ${i===trail.length-1?'aria-current="page"':''}>${esc(m.title)}</button>`).join('<span aria-hidden="true">›</span>');
    $('.atlas-spots').innerHTML=Object.values(maps).filter(m=>m.parent===map.id&&Number.isFinite(m.x)).map(m=>`<button class="atlas-spot ${map.id==='world'?'continent-spot':''}" style="left:${m.x*100}%;top:${m.y*100}%" data-map-id="${esc(m.id)}" aria-label="${t('Open','Öppna')} ${esc(m.title)}"><span class="atlas-dot">◆</span><span class="atlas-spot-name">${esc(m.title)}</span></button>`).join('');
@@ -35,15 +42,24 @@
   root.addEventListener('click',e=>{
    const button=e.target.closest('button');if(!button)return;
    if(button.dataset.mapId){if(!suppressClick)choose(button.dataset.mapId);$('#atlas-results').hidden=true;return;}
-   const a=button.dataset.atlas;if(a==='in')zoom(1.5);if(a==='out'){
-    if(z===1&&map.parent)choose(map.parent);else zoom(1/1.5);
-   }if(a==='fit'){z=1;px=py=0;paint();}if(a==='my-zone')choose(root.dataset.currentZone);
+   const a=button.dataset.atlas;if(a==='in')zoom(1.5);if(a==='out')zoom(1/1.5);if(a==='fit'){z=1;px=py=0;paint();}if(a==='my-zone')choose(root.dataset.currentZone);
    if(a==='choose-zone'&&map.zoneId)onChoose(map.zoneId);
    if(a==='expand'){root.classList.toggle('atlas-expanded');button.textContent=root.classList.contains('atlas-expanded')?t('Close','Stäng'):t('Expand','Förstora');layout();}
   });
   $('#atlas-select').addEventListener('change',e=>choose(e.target.value));
   $('#atlas-search').addEventListener('input',e=>{const list=$('#atlas-results'),q=e.target.value.trim();list.hidden=!q;const results=search(maps,q);list.innerHTML=results.length?results.map(m=>`<button data-map-id="${esc(m.id)}"><strong>${esc(m.title)}</strong><small>${esc((m.places||[]).filter(p=>norm(p).includes(norm(q))).slice(0,3).join(' · '))}</small></button>`).join(''):`<p>${t('No matching map or named place.','Ingen matchande karta eller plats.')}</p>`;});
-  vp.addEventListener('wheel',e=>{e.preventDefault();const r=vp.getBoundingClientRect();zoom(e.deltaY<0?1.18:1/1.18,e.clientX-r.left,e.clientY-r.top);},{passive:false});
+  vp.addEventListener('wheel',e=>{
+   e.preventDefault();if(e.deltaY===0)return;
+   const now=performance.now();
+   // A wheel burst must not cross multiple map levels in one continuous scroll.
+   if(now-lastWheelAt>260)wheelOutLocked=false;
+   lastWheelAt=now;
+   if(e.deltaY>0&&wheelOutLocked)return;
+   const previous=map.id,r=vp.getBoundingClientRect();
+   zoom(e.deltaY<0?1.18:1/1.18,e.clientX-r.left,e.clientY-r.top);
+   if(e.deltaY>0&&map.id!==previous)wheelOutLocked=true;
+   if(e.deltaY<0)wheelOutLocked=false;
+  },{passive:false});
   vp.addEventListener('pointerdown',e=>{
    if(e.button!==0&&e.pointerType==='mouse')return;
    points.set(e.pointerId,{x:e.clientX,y:e.clientY});suppressClick=false;if(!e.target.closest('button'))vp.setPointerCapture(e.pointerId);
@@ -64,5 +80,5 @@
   if(showSources&&data.source){const p=document.createElement('p');p.className='small';const a=document.createElement('a');a.href=data.source;a.textContent=t('Map source','Kartkälla');a.target='_blank';a.rel='noopener noreferrer';p.append(a);root.append(p);}
   return {choose};
  }
- return {search,nearest,bounds,zoomOutParent,render,mount};
+ return {search,nearest,bounds,zoomOutParent,mapNavigation,render,mount};
 });

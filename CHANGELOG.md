@@ -2,6 +2,11 @@
 
 Alla ändringar nedan finns i GitHub-repot. Changeloggen visas inte på webbplatsen.
 
+## 0.7.4 – 2026-10-27
+- **World Map:** Utzoomning från en zon återgår nu till den föregående kontinentvyn med samma zoomnivå och position, inte hela kontinenten. Fungerar med mushjul, nypgest, minusknapp och minustangent. (`world-map.js`)
+- **Mushjul:** Ett sammanhängande scrollande kan inte längre hoppa genom flera kartnivåer på en gång. (`world-map.js`)
+- Versionsnummer och offline-cache uppdaterade. (`app.js`, `index.html`, `sw.js`)
+
 ## 0.7.3 – 2026-10-27
 - **World Map:** Det går nu att zooma ut från en zon med mushjul, nypgest eller minustangenten. När zonen är på 100 % öppnas dess överordnade kontinentkarta, och därefter kan man zooma vidare till världskartan. (`world-map.js`)
 - Uppdaterade version och offline-cache så kartändringen hämtas utan att gammal kod ligger kvar. (`app.js`, `index.html`, `sw.js`)

@@ -43,3 +43,22 @@ test('zooming out at minimum zoom navigates to the parent map, never past the wo
  assert.equal(W.zoomOutParent(maps,maps.zone,1.4,1/1.18),null);
  assert.equal(W.zoomOutParent(maps,maps.zone,1,1.18),null);
 });
+
+test('zoom navigation restores the previous zoom and pan for each parent map',()=>{
+ const W=require('../world-map.js');
+ const maps={world:{id:'world'},continent:{id:'continent',parent:'world'},zone:{id:'zone',parent:'continent'},other:{id:'other',parent:'continent'}};
+ const worldView={z:2.3,px:-125,py:65},continentView={z:2.4,px:110,py:-90};
+ const toContinent=W.mapNavigation(maps,maps.world,'continent',worldView,[]);
+ assert.equal(toContinent.history.length,1);
+ const toZone=W.mapNavigation(maps,maps.continent,'zone',continentView,toContinent.history);
+ assert.equal(toZone.history.length,2);
+ const back=W.mapNavigation(maps,maps.zone,'continent',{z:1,px:0,py:0},toZone.history);
+ assert.deepEqual(back.restore,{id:'continent',...continentView});
+ assert.equal(back.history.length,1);
+ const next=W.mapNavigation(maps,maps.continent,'other',continentView,back.history);
+ const backToWorld=W.mapNavigation(maps,maps.other,'world',{z:1,px:0,py:0},next.history);
+ assert.deepEqual(backToWorld.restore,{id:'world',...worldView});
+ assert.equal(backToWorld.history.length,0);
+ assert.equal(W.mapNavigation(maps,maps.zone,'continent',{z:1,px:0,py:0},[]).restore,null);
+ assert.equal(W.mapNavigation(maps,maps.zone,'other',{z:1,px:0,py:0},toZone.history).history.length,0);
+});
