@@ -66,7 +66,7 @@ Enter owned profession materials to see a combined remaining leveling budget. Cu
 
 Search quests, zones, abilities, talents, and controller functions. The controller reference includes Xbox, PlayStation, and generic button names and is based on a pinned revision of the Forever client UI source. Follow the game's prompts when controls differ.
 
-English is the default language; Swedish is available in Settings. Choose from five themes, including a black OLED theme, and adjust assistance and beginner explanations separately. Settings lives in the side menu. The compact interface is shared by all players; there is no separate Play Mode.
+English is the default language; Swedish is available in Settings. Choose from five themes, including a black OLED theme, and adjust assistance and beginner explanations separately. Beginner Mode is off by default for new characters but can be enabled per character; existing characters keep their saved setting. Settings lives in the side menu. The compact interface is shared by all players; there is no separate Play Mode.
 
 Source links are optional and off by default. They can be enabled in Settings; the full provenance remains available from Sources & content status.
 

@@ -62,3 +62,14 @@ test('content ids are unique and every class has its own quest content',()=>{
  const ids=[...d.quests,...d.misc,...d.dungeons,...d.zones,...d.professions,...d.glossary,...catalog.abilities,...d.dungeons.flatMap(x=>x.quests)].map(x=>x.id);assert.equal(new Set(ids).size,ids.length);
  for(const id of Object.keys(catalog.classes))assert(d.quests.some(q=>q.classId===id));
 });
+
+test('new characters have beginner mode off by default without changing saved choices',()=>{
+ const fresh=C.createCharacter(),blank=C.createBlankCharacter();
+ assert.equal(fresh.beginner,false);assert.equal(blank.beginner,false);
+ const enabled={...C.createCharacter({name:'Enabled'}),beginner:true};
+ const disabled={...C.createCharacter({name:'Disabled'}),beginner:false};
+ const out=C.normalise({schema:1,characters:[enabled,disabled]},catalog);
+ assert.equal(out.characters[0].beginner,true);assert.equal(out.characters[1].beginner,false);
+ const legacy={...enabled};delete legacy.beginner;
+ assert.equal(C.normalise({schema:1,characters:[legacy]},catalog).characters[0].beginner,true);
+});

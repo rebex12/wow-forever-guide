@@ -22,3 +22,12 @@
 .quest-card.skipped{border-style:dashed}
 .quest-card.skipped h3{color:var(--muted)}
 @media(max-width:720px){.task-filters{gap:10px}.task-filters .view-tabs{width:100%}.task-filters .view-tabs button{flex:1;padding:8px 10px}.task-actions{padding-left:14px;padding-right:14px}.task-filters .activity-choice{margin-right:auto}}
+
+/* Overview: keep activity and completion filters together on the right. */
+.task-filters{justify-content:flex-start}
+.task-filters .view-tabs{margin-right:auto;margin-bottom:0}
+.task-filters>.form-check{margin-left:0}
+@media(max-width:720px){
+ .task-filters .view-tabs{margin-right:0}
+ .task-filters>.form-check{margin-left:auto}
+}

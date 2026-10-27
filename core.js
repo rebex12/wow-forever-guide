@@ -34,7 +34,7 @@
         view: 'now',
         showDone: false
       },
-      beginner: true,
+      beginner: false,
       helpLevel: clamp(values.helpLevel ?? 2, 1, 4),
       journey: normaliseJourney(values.journey),
       companion: normaliseCompanion(values.companion),
