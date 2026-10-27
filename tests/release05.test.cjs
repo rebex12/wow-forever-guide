@@ -62,3 +62,26 @@ test('zoom navigation restores the previous zoom and pan for each parent map',()
  assert.equal(W.mapNavigation(maps,maps.zone,'continent',{z:1,px:0,py:0},[]).restore,null);
  assert.equal(W.mapNavigation(maps,maps.zone,'other',{z:1,px:0,py:0},toZone.history).history.length,0);
 });
+
+test('zone hit testing distinguishes The Barrens from Mulgore',()=>{
+ assert.equal(A.zoneAt(maps,'kalimdor',.497,.572)?.id,'zone-barrens');
+ assert.equal(A.zoneAt(maps,'kalimdor',.470,.580)?.id,'zone-mulgore');
+ assert.equal(A.zoneAt(maps,'kalimdor',.527,.510)?.id,'zone-barrens');
+ assert.equal(A.zoneAt(maps,'kalimdor',-.2,.5),null);
+ assert.equal(A.zoneAt(maps,'kalimdor',.02,.95,.04),null);
+});
+test('adjacent-zone navigation uses directly linked neighboring land maps',()=>{
+ const nearby=A.adjacentZones(maps,'zone-barrens',require('../travel-data.js')).map(m=>m.id);
+ for(const id of ['zone-durotar','zone-mulgore','zone-ashenvale','zone-stonetalon','zone-dustwallow-marsh','zone-thousand-needles'])assert(nearby.includes(id),id);
+ assert(!nearby.includes('zone-elwynn'));
+ assert.equal(nearby.length,new Set(nearby).size);
+ assert.deepEqual(A.adjacentZones(maps,'world',require('../travel-data.js')),[]);
+ assert(A.render({data:window.WORLD_MAP_DATA,initial:'zone-barrens'}).includes('atlas-neighbors'));
+});
+test('mobile pinch zoom never auto-opens a zone and gestures cannot trigger a tap',()=>{
+ const source=fs.readFileSync(path.join(__dirname,'../world-map.js'),'utf8');
+ assert(source.includes('function zoom(factor,x=vw/2,y=vh/2,autoOpen=false)'));
+ assert(source.includes('const candidate=autoOpen?zoneAt'));
+ assert(source.includes('suppressClick=true;zoom(distance/gesture.distance'));
+ assert(source.includes('if(!points.size)suppressClick=false'));
+});
