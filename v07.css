@@ -31,3 +31,10 @@
  .task-filters .view-tabs{margin-right:0}
  .task-filters>.form-check{margin-left:auto}
 }
+
+/* Sidebar character selector: show full names instead of truncating them. */
+.sidebar-character .character-switch{height:auto;min-width:0}
+.sidebar-character .character-switch>.icon{flex-shrink:0}
+.sidebar-character .character-copy{min-width:0}
+.sidebar-character .character-copy strong{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;word-break:normal;line-height:1.35;text-wrap:pretty}
+.sidebar-character .character-copy small{overflow-wrap:anywhere}
