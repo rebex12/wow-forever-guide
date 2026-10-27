@@ -6,7 +6,7 @@ const vm=require('node:vm');
 const C=require('../core.js');
 const T=require('../guide-tools.js');
 const file=name=>fs.readFileSync(path.join(__dirname,'..',name),'utf8');
-function data(){const window={};for(const f of ['catalog.js','content.js','zone-data.js','controller-data.js'])vm.runInNewContext(file(f),{window});T.augment(window.GUIDE_CONTENT,window.GUIDE_EXTRA_ZONES);return window;}
+function data(){const window={};for(const f of ['catalog.js','content.js','zone-data.js','controller-data.js','release-content.js'])vm.runInNewContext(file(f),{window});window.RELEASE_CONTENT.apply(window.GUIDE_CONTENT);Object.assign(T.dungeonZones,window.RELEASE_CONTENT.dungeonZones);T.augment(window.GUIDE_CONTENT,window.GUIDE_EXTRA_ZONES);return window;}
 function language(){const L=require('../i18n.js');vm.runInNewContext(file('locales.js'),{window:{GuideI18n:L}});L.setLanguage('en');return L;}
 
 test('old saves gain English defaults without losing progress, builds, notes or display choices',()=>{
@@ -62,8 +62,8 @@ function app(){
   const element=s=>{if(!elements.has(s))elements.set(s,{innerHTML:'',textContent:'',value:'',hidden:false,dataset:{},classList:{toggle(){},add(){},remove(){}},setAttribute(){},addEventListener(){},focus(){},close(){this.open=false},showModal(){this.open=true}});return elements.get(s);};
   const document={querySelector:element,querySelectorAll:()=>[],addEventListener:(n,f)=>events[n]=f,documentElement:{dataset:{}},body:{classList:{toggle(){}}}};
   const window={addEventListener(){},scrollTo(){},isSecureContext:false};const storage=new Map();const context={window,document,location:{hash:'',protocol:'http:'},history:{replaceState(){},pushState(){}},navigator:{onLine:true},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},getComputedStyle:()=>({getPropertyValue:()=> '#000'}),URL,console,setTimeout:()=>1,clearTimeout(){}};
-  vm.createContext(context);for(const f of ['i18n.js','locales.js','catalog.js','content.js','core.js','guide-tools.js','zone-data.js','controller-data.js','character-rules.js','game-assets.js'])vm.runInContext(file(f),context);
-  vm.runInContext(file('app.js').replace('  fillIcons();', '  window.testAPI={state,character,go,settings,renderShell,renderContent,searchPage,questCard,zoneCard,overview,controllerPage,actionableItems,summary,builtIn,talents,goBack};\n  fillIcons();'),context);
+  vm.createContext(context);for(const f of ['i18n.js','locales.js','catalog.js','content.js','core.js','guide-tools.js','zone-data.js','controller-data.js','character-rules.js','game-assets.js','quest-chains.js','release-content.js','talent-text.js','profession-planner.js'])vm.runInContext(file(f),context);
+  vm.runInContext(file('app.js').replace('  fillIcons();', '  window.testAPI={state,character,go,settings,renderShell,renderContent,searchPage,questCard,zoneCard,overview,controllerPage,actionableItems,summary,builtIn,talents,goBack,sourceLine,dungeonCard,zoneGuide,talentInfo,showTalentTooltip,hideTalentTooltip,professionsPage,professionMaterials,professionGear};\n  fillIcons();'),context);
   return {api:window.testAPI,element,document,events,storage};
 }
 test('every page renders in both languages and preserves user-written notes',()=>{
@@ -122,4 +122,61 @@ test('back navigation returns to the previous app page',()=>{
 });
 test('every talent uses a bundled game icon and each catalogue position stays in its grid',()=>{
  const window={};vm.runInNewContext(file('game-assets.js'),{window});const assets=window.GAME_ASSETS;for(const cl of Object.values(data().FOREVER_CATALOG.classes))for(const t of cl.trees)for(const tal of t.talents){assert(assets.icons[assets.talents[tal.id]],tal.name);assert(tal.row>=0&&tal.col>=0&&tal.col<4);}
+});
+
+test('source links default off, persist when enabled, and affect cards across categories',()=>{
+ const a=app(),c=a.api.character();Object.assign(c,C.createCharacter({name:'Test',level:20}),{blank:false});
+ assert.equal(a.api.state.settings.showSourceLinks,false);assert.equal(a.api.sourceLine({source:'https://www.wowhead.com/forever/quest=1'}),'');assert(!a.api.controllerPage().includes('Client source'));
+ a.api.state.settings.showSourceLinks=true;assert(a.api.sourceLine({source:'https://www.wowhead.com/forever/quest=1'}).includes('href='));assert(a.api.controllerPage().includes('Client source'));
+ const saved=C.normalise(JSON.parse(JSON.stringify(a.api.state)),data().FOREVER_CATALOG);assert.equal(saved.settings.showSourceLinks,true);
+ a.api.state.settings.showSourceLinks=false;assert(!a.api.dungeonCard(data().GUIDE_CONTENT.dungeons[0]).includes('href='));
+});
+test('all task views sort ascending and locked followups stay out of quests and zone tips',()=>{
+ const a=app(),c=a.api.character();Object.assign(c,C.createCharacter({name:'Test',level:20,currentZone:'zone-barrens'}),{blank:false});
+ for(const view of ['now','soon','all']){c.filters.view=view;const rows=a.api.actionableItems();assert(rows.every((q,i)=>!i||rows[i-1].level<=q.level));}
+ c.filters.view='all';assert(!a.api.actionableItems().some(q=>q.id==='oasis-stagnant'));assert(!a.api.overview().includes('data-check="oasis-stagnant"'));assert(a.api.overview().includes('Later in this chain'));assert(a.api.overview().includes('Crescent Staff'));
+ c.done['oasis-pools']=true;assert(a.api.actionableItems().some(q=>q.id==='oasis-stagnant'));assert(a.api.overview().includes('data-check="oasis-stagnant"'));delete c.done['oasis-pools'];assert(!a.api.actionableItems().some(q=>q.id==='oasis-stagnant'));
+});
+test('all dependency branches resolve and no chain contains a cycle',()=>{
+ const Q=require('../quest-chains'),d=data().GUIDE_CONTENT,byId=new Map(d.quests.map(q=>[q.id,q]));
+ for(const q of d.quests)for(const dep of [...(q.requiresQuests||[]),...(q.requiresAny||[])])assert(byId.has(dep),q.id+' -> '+dep);
+ const visit=(id,path=[])=>{assert(!path.includes(id),'cycle '+[...path,id]);for(const dep of [...(byId.get(id)?.requiresQuests||[]),...(byId.get(id)?.requiresAny||[])])visit(dep,[...path,id]);};for(const q of d.quests)visit(q.id);
+ const c=C.createCharacter({faction:'Horde'}),sleep=byId.get('sleep-stones');assert(!Q.available(sleep,c,d.quests,C.questDone));c.done['sleep-note-horde']=true;assert(Q.available(sleep,c,d.quests,C.questDone));
+ const oox=byId.get('oox-reward');c.done['oox-tn-rescue']=true;c.done['oox-hl-rescue']=true;assert(!Q.available(oox,c,d.quests,C.questDone));c.done['oox-fe-rescue']=true;assert(Q.available(oox,c,d.quests,C.questDone));
+});
+test('Cozy Sleeping Bag is recommended at 20 with minimum 14 and faction-specific starts',()=>{
+ const d=data().GUIDE_CONTENT,sleep=d.quests.filter(q=>q.id.startsWith('sleep-'));assert.equal(sleep.length,7);assert(sleep.every(q=>q.level===20&&q.minLevel===14));assert.equal(sleep.find(q=>q.id==='sleep-note-horde').faction,'Horde');assert.equal(sleep.find(q=>q.id==='sleep-note-alliance').faction,'Alliance');
+});
+test('dungeon coverage reaches 60 and every guide zone has mapped quest content',()=>{
+ const d=data().GUIDE_CONTENT;assert.equal(d.dungeons.length,36);for(const id of ['sm-armory','sm-cathedral','rfd','uldaman','zf','mara-falls','sunken-temple','brd','lbrs','ubrs','scholomance','stratholme','dire-maul-east','dire-maul-west','dire-maul-north','blackmaw','shaper'])assert(d.dungeons.some(x=>x.id===id),id);
+ for(const z of d.zones)assert(d.quests.some(q=>q.zoneIds?.includes(z.id)),z.title);
+ for(const dungeon of d.dungeons){assert(dungeon.level<=dungeon.maxLevel);assert(dungeon.maxLevel<=60);assert(dungeon.level>=13);}
+});
+test('all nine talent classes have local backgrounds and every rank has readable effect text',()=>{
+ const window={};vm.runInNewContext(file('talent-text.js'),{window});let count=0;
+ for(const cl of Object.values(data().FOREVER_CATALOG.classes))for(const tree of cl.trees){assert(fs.existsSync(path.join(__dirname,'../assets/talents',tree.id+'.jpg')));for(const t of tree.talents)for(let rank=1;rank<=t.max;rank++){assert(window.TALENT_TEXT[t.id]?.[rank]?.length>5,t.name+' '+rank);count++;}}
+ assert(count>1000);const a=app(),c=a.api.character();Object.assign(c,C.createCharacter({level:20}),{blank:false});const b=a.api.builtIn();c.builds=[b];c.activeBuild=b.id;const html=a.api.talents();assert(html.includes('talent-arrows'));assert(html.includes('data-tooltip='));assert(html.includes('assets/talents/'));const info=a.api.talentInfo(1,0);assert(info.includes('talent-effect'));assert(!info.includes('Effect text is not available'));
+});
+test('profession skills survive backup and character switching and reject invalid values',()=>{
+ const db=data().FOREVER_CATALOG,a=C.createCharacter({professionSkills:{Cooking:125,'First Aid':80,Fishing:300,Alchemy:400,Unknown:100,Mining:-1,Tailoring:'50'}}),b=C.createCharacter({professionSkills:{Cooking:10}});
+ const s=C.normalise({schema:1,characters:[a,b],activeId:b.id},db);assert.deepEqual(s.characters[0].professionSkills,{Cooking:125,'First Aid':80,Fishing:300});assert.equal(s.characters[1].professionSkills.Cooking,10);assert.deepEqual(C.createCharacter().professionSkills,{});
+});
+test('material budgets count leveling only and drop completed stages at exact boundaries',()=>{
+ const P=require('../profession-planner');const c=P.shopping('Cooking',1).filter(x=>!x.preliminary);assert.equal(c.find(x=>x.name==='Raw Brilliant Smallfish').total,52);assert.equal(c.find(x=>x.name==='Raw Bristle Whisker Catfish').total,120);assert(!c.some(x=>x.name==='Giant Egg'));
+ const mid=P.shopping('Cooking',125).find(x=>x.name==='Raw Bristle Whisker Catfish');assert.equal(mid.current,28);assert.equal(mid.future,65);assert.equal(mid.total,93);
+ assert(!P.shopping('Cooking',50).some(x=>x.name==='Raw Brilliant Smallfish'));assert.equal(P.shopping('First Aid',1).filter(x=>!x.preliminary).find(x=>x.name==='Linen Cloth').total,175);assert(!P.shopping('First Aid',80).some(x=>x.name==='Linen Cloth'));assert.deepEqual(P.shopping('Cooking',300),[]);assert.deepEqual(P.shopping('First Aid',300),[]);assert.deepEqual(P.shopping('Fishing',1),[]);assert.deepEqual(P.shopping('Cooking',undefined),[]);
+});
+test('crafted gear respects every class, role, chosen professions and the imported talent school',()=>{
+ const P=require('../profession-planner'),db=data().FOREVER_CATALOG;
+ for(const [classId,roles]of Object.entries(P.specializations))for(const role of Object.keys(roles)){const c=C.createCharacter({classId,role,professions:['Blacksmithing','Leatherworking','Tailoring','Enchanting','Engineering']});const items=P.suggestions(c,null,db);assert(items.length,classId+' '+role);assert(items.every(x=>x.classId===classId&&x.role===role));}
+ const c=C.createCharacter({classId:'mage',role:'DPS',professions:['Tailoring']});const trees=db.classes.mage.trees;const b={allocations:trees.map(t=>t.talents.map((x,i)=>t.name==='Fire'&&i===0?1:0))};const items=P.suggestions(c,b,db);assert(items.every(g=>g.profession==='Tailoring'&&g.spec==='Fire'));assert(items.some(g=>g.name.includes('Flame')));assert(!items.some(g=>g.name.includes('Pearly')));assert.deepEqual(P.suggestions({...c,professions:['Mining']},b,db),[]);
+});
+test('profession plans render in English and Swedish and retain source-link preferences',()=>{
+ const a=app(),c=a.api.character();Object.assign(c,C.createCharacter({classId:'mage',role:'DPS',professions:['Tailoring','Enchanting','Cooking','First Aid','Fishing'],professionSkills:{Cooking:125,'First Aid':80,Fishing:200}}),{blank:false});
+ for(const language of ['en','sv']){a.api.state.settings.language=language;a.api.go('professions');const html=a.element('#content').innerHTML;assert(!html.includes('[object Object]'));assert(!html.includes('undefined'));assert(html.includes('data-profession-skill="Fishing"'));assert(html.includes('Raw Bristle Whisker Catfish'));assert(html.includes('93'));assert(html.includes('Clamlette Surprise'));assert(!html.includes('href='));}
+});
+test('editing a profession skill updates the real view and saved profile immediately',()=>{
+ const a=app(),c=a.api.character();Object.assign(c,C.createCharacter({name:'Test',professions:['Cooking'],professionSkills:{Cooking:1}}),{blank:false});a.api.go('professions');
+ a.events.change({target:{dataset:{professionSkill:'Cooking'},value:'125',closest:()=>null,setCustomValidity(){}}});assert.equal(c.professionSkills.Cooking,125);assert(a.element('#content').innerHTML.includes('≈ 93'));const saved=JSON.parse(a.storage.get(C.KEY));assert.equal(saved.characters[0].professionSkills.Cooking,125);
+ a.events.change({target:{dataset:{professionSkill:'Cooking'},value:'301',closest:()=>null,setCustomValidity(){},reportValidity(){}}});assert.equal(c.professionSkills.Cooking,125);
 });

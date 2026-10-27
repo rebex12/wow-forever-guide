@@ -9,6 +9,9 @@
     L = window.GuideI18n,
     T = window.GuideTools;
   RAW.controls = window.GUIDE_CONTROLS.rows;
+  const Q=window.QuestChains;
+  window.RELEASE_CONTENT.apply(RAW);
+  Object.assign(T.dungeonZones,window.RELEASE_CONTENT.dungeonZones);
   T.augment(RAW, window.GUIDE_EXTRA_ZONES);
   const R = window.CharacterRules;
   let navTrail = [],
@@ -72,12 +75,13 @@
   const safeSource = value => {
     try {
       const u = new URL(value);
-      return u.protocol === 'https:' && ['www.wowhead.com', 'wowhead.com'].includes(u.hostname) ? u.href : '';
+      return u.protocol === 'https:' && ['www.wowhead.com', 'wowhead.com', 'worldofwarcraft.blizzard.com'].includes(u.hostname) ? u.href : '';
     } catch {
       return '';
     }
   };
-  const icon = n => L.h`<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">${paths[n] || paths.compass}</svg>`;
+  const utilityIcon = n => L.h`<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">${paths[n] || paths.compass}</svg>`;
+  const icon=n=>window.GAME_ASSETS.categories?.[n]?gameIcon(window.GAME_ASSETS.categories[n]):utilityIcon(n);
   const nav = [['overview', 'Översikt', 'compass'], ['talents', 'Talents & builds', 'zap'], ['quests', 'Quests', 'scroll'], ['dungeons', 'Dungeons', 'dungeon'], ['zones', 'Levelingzoner', 'map'], ['zone-guide', 'Min zon', 'pin'], ['abilities', 'Abilities & träning', 'sparkles'], ['gear', 'Utrustning', 'shield'], ['professions', 'Professions', 'pickaxe'], ['notes', 'Mina anteckningar', 'note'], ['glossary', 'Nybörjarguiden', 'book'], ['controller', 'Handkontroll', 'gamepad']];
   const categoryNames = {
     quests: 'Quests',
@@ -157,6 +161,7 @@
     language: 'en',
     theme: 'forest'
   };
+  state.settings.showSourceLinks=state.settings.showSourceLinks===true;
   L.setLanguage(state.settings.language);
   D = L.localize(RAW);
   const character = () => state.characters.find(c => c.id === state.activeId) || state.characters[0];
@@ -190,16 +195,15 @@
     return `<span class="class-avatar ${large ? 'large' : ''}" style="--class-color:${DB.classes[c.classId].color}">${gameIcon(window.GAME_ASSETS.classes[c.classId])}</span>`;
   }
   function sourceLine(item) {
-    const status = item.status === 'preliminary' ? L.t('Preliminärt') : item.status === 'editorial' ? L.t('Praktiskt tips') : L.t('Källuppgift');
-    return L.h`<div class="source-line"><span><i class="status-dot ${item.status === 'preliminary' ? 'preliminary' : ''}"></i> ${status}${item.updated ? ' · ' + esc(item.updated) : ''}</span>${safeSource(item.source) ? L.h`<a href="${esc(safeSource(item.source))}" target="_blank" rel="noopener noreferrer">Källa ${icon('external')}</a>` : ''}</div>`;
-  }
+ if(!state.settings.showSourceLinks)return '';
+ const status=item.status==='preliminary'?L.t('Preliminärt'):item.status==='editorial'?L.t('Praktiskt tips'):L.t('Källuppgift');
+ return `<div class="source-line"><span><i class="status-dot ${item.status==='preliminary'?'preliminary':''}"></i> ${status}${item.updated?' · '+esc(item.updated):''}</span>${safeSource(item.source)?`<a href="${esc(safeSource(item.source))}" target="_blank" rel="noopener noreferrer">${bi('Source','Källa')} ${icon('external')}</a>`:''}</div>`;
+}
   function levelTag(level, done = false) {
     const l = character().level;
     return L.h`<span class="level-tag ${level < l && !done ? 'overdue' : level > l ? 'future' : ''}">LV ${level}${level < l && !done ? L.m(' · kvar att göra') : ''}</span>`;
   }
-  function coverage() {
-    return L.h`<div class="coverage-note">${icon('info')}<span>Första utkastet innehåller ett urval quests. ${character().level > 30 ? L.m('Detaljerna efter level 30 utökas löpande. ') : ''}<button class="term" data-action="about">Se innehållsstatus och källor.</button></span></div>`;
-  }
+  function coverage(){return `<div class="coverage-note">${utilityIcon('info')}<span>${bi('Selected quests and rewards, not a complete quest route. Level tags are suggested task levels; documented minimum requirements are shown separately.','Utvalda quests och belöningar, inte en komplett questrutt. Level-taggar visar föreslagen level; dokumenterade minimikrav visas separat.')} <button class="term" data-action="about">${bi('Content status and sources','Innehållsstatus och källor')}</button></span></div>`;}
   function tabs() {
     const c = character();
     return L.h`<div class="section-top"><div class="view-tabs" role="group" aria-label="Vilka levels ska visas?">${[['now', L.t('Aktuellt nu')], ['soon', L.t('Kommande')], ['all', L.t('Allt')]].map(([v, t]) => L.h`<button data-view="${v}" class="${c.filters.view === v ? 'active' : ''}" aria-pressed="${c.filters.view === v}">${L.t(t)}</button>`).join('')}</div><label class="form-check small"><input type="checkbox" id="show-done" ${c.filters.showDone ? 'checked' : ''}> Visa klara</label></div>`;
@@ -214,15 +218,13 @@
     return C.matchesCharacter(item, c) && T.visibleAtHelp(item, c) && (!item.roles || item.roles.includes(c.role)) && c.filters.categories.includes(item.category);
   }
   function actionableItems() {
-    const c = character();
-    return [...D.quests, ...D.misc].filter(q => visible(q) && inView(q) && (c.filters.showDone || !C.questDone(q, c))).sort((a, b) => c.filters.view === 'all' ? a.level - b.level || a.title.localeCompare(b.title) : Number(b.level === c.level) - Number(a.level === c.level) || Number(!!b.classId) - Number(!!a.classId) || b.level - a.level);
-  }
+ const c=character();
+ return [...D.quests,...D.misc].filter(q=>visible(q)&&inView(q)&&Q.available(q,c,D.quests,C.questDone)&&(c.filters.showDone||!C.questDone(q,c))).sort((a,b)=>a.level-b.level||a.title.localeCompare(b.title));
+}
   function questCard(q) {
-    const c = character(),
-      done = C.questDone(q, c),
-      partial = q.steps?.filter((_, i) => c.done[q.id + ':' + i]).length || 0;
-    return L.h`<article class="quest-card ${done ? 'done' : ''}"><div class="quest-head"><input class="quest-check" type="checkbox" data-check="${esc(q.id)}" aria-label="Markera ${esc(q.title)} som klar" ${done ? 'checked' : ''}><div class="quest-copy"><div class="card-meta">${levelTag(q.level, done)}<span>${q.classId ? esc(DB.classes[q.classId].name) + ' · ' + (q.category === 'quests' ? L.t('Klassquest') : L.t(categoryNames[q.category]) || 'Guide') : q.kind || L.t(categoryNames[q.category]) || 'Quest'}</span>${partial && !done ? L.h`<span>· ${partial}/${q.steps.length} steg</span>` : ''}</div><h3>${esc(q.title)}</h3>${c.helpLevel >= 2 ? L.h`<p>${esc(q.desc || L.t('Kontrollera och lär den här förmågan när den blir tillgänglig.'))}</p>` : ''}</div><span class="quest-icon">${q.classId ? gameIcon(window.GAME_ASSETS.classes[q.classId]) : icon(categoryIcons[q.category] || 'check')}</span></div><details class="quest-details" ${c.helpLevel >= 3 ? 'open' : ''}><summary>Visa ${q.steps?.length ? L.t('steg och plats') : L.t('mer information')}</summary><div class="details-inner">${q.location || q.reward ? L.h`<dl>${q.location ? L.h`<dt>Start / plats</dt><dd>${esc(q.location)} ${q.coords ? coordinate(q.coords) : ''}</dd>` : ''}${q.reward ? L.h`<dt>Belöning</dt><dd>${esc(q.reward)}</dd>` : ''}</dl>` : ''}${q.category === 'abilities' ? L.h`<p>Träningsnivå enligt Forever-kalkylatorn. Vissa förmågor kräver en klassquest eller annan upplåsning. Kontrollera även din trainer och spellbook.</p><a href="${esc(q.source)}" target="_blank" rel="noopener noreferrer">Läs förmågans beskrivning på Wowhead ${icon('external')}</a>` : ''}${q.steps?.length ? L.h`<div class="step-list">${q.steps.map((step, i) => L.h`<label class="step-row ${c.done[q.id + ':' + i] ? 'completed' : ''}"><input type="checkbox" data-step="${esc(q.id)}" data-index="${i}" ${c.done[q.id + ':' + i] ? 'checked' : ''}><span>${esc(step)}</span></label>`).join('')}</div>` : ''}${sourceLine(q)}</div></details></article>`;
-  }
+ const c=character(),done=C.questDone(q,c),partial=q.steps?.filter((_,i)=>c.done[q.id+':'+i]).length||0;
+ return `<article class="quest-card ${done?'done':''}"><div class="quest-head"><input class="quest-check" type="checkbox" data-check="${esc(q.id)}" aria-label="${bi('Mark as completed','Markera som klar')}: ${esc(q.title)}" ${done?'checked':''}><div class="quest-copy"><div class="card-meta">${levelTag(q.level,done)}<span>${q.classId?esc(DB.classes[q.classId].name)+' · '+bi('Class quest','Klassquest'):esc(q.kind||L.t(categoryNames[q.category])||'Quest')}</span>${q.highValue?`<span class="reward-tag">${bi('Notable reward','Bra belöning')}</span>`:''}${q.group?`<span>${bi('Group','Grupp')}: ${esc(q.group)}</span>`:''}${partial&&!done?`<span>· ${partial}/${q.steps.length} ${bi('steps','steg')}</span>`:''}</div><h3>${esc(q.title)}</h3>${c.helpLevel>=2?`<p>${esc(q.desc||bi('Check this task when it becomes available.','Kontrollera uppgiften när den blir tillgänglig.'))}</p>`:''}${q.highValue&&q.reward?`<p class="quest-reward">${esc(q.reward)}</p>`:''}${q.status==='preliminary'?`<small class="content-caution">${esc(q.caution||bi('Preliminary: check the quest log for the current Forever requirements and reward.','Preliminärt: kontrollera aktuella Forever-krav och belöning i questloggen.'))}</small>`:''}${rewardPreview(q)}</div><span class="quest-icon">${q.classId?gameIcon(window.GAME_ASSETS.classes[q.classId]):icon(categoryIcons[q.category]||'scroll')}</span></div><details class="quest-details" ${c.helpLevel>=3?'open':''}><summary>${bi('Show steps and location','Visa steg och plats')}</summary><div class="details-inner">${q.location||q.reward?`<dl>${q.location?`<dt>${bi('Start / location','Start / plats')}</dt><dd>${esc(q.location)} ${q.coords?coordinate(q.coords):''}</dd>`:''}${q.reward&&!q.highValue?`<dt>${bi('Reward','Belöning')}</dt><dd>${esc(q.reward)}</dd>`:''}${q.minLevel?`<dt>${bi('Minimum level','Lägsta level')}</dt><dd>${q.minLevel}</dd>`:''}</dl>`:''}${q.audience?`<p>${bi('Useful for','Passar för')}: ${esc(q.audience)}</p>`:''}${q.prereq?`<p>${bi('Prerequisites','Förkrav')}: ${esc(q.prereq)}</p>`:''}${q.category==='abilities'?`<p>${bi('First training level from the Forever calculator. A class quest or another unlock may also be required.','Första träningsnivå enligt Forever-kalkylatorn. En klassquest eller annan upplåsning kan också krävas.')}</p>`:''}${q.steps?.length?`<div class="step-list">${q.steps.map((s,i)=>`<label class="step-row ${c.done[q.id+':'+i]?'completed':''}"><input type="checkbox" data-step="${esc(q.id)}" data-index="${i}" ${c.done[q.id+':'+i]?'checked':''}><span>${esc(s)}</span></label>`).join('')}</div>`:''}${sourceLine(q)}</div></details></article>`;
+}
   function coordinate(coords) {
     return L.h`<button class="coordinate" data-copy="${esc(coords)}" aria-label="Kopiera koordinater">${esc(coords)} ${icon('copy')}</button>`;
   }
@@ -234,11 +236,10 @@
     const c = character();
     return D.zones.filter(z => !z.isCity && visible(z) && (c.filters.view === 'all' || (c.filters.view === 'soon' ? z.level > c.level && z.level <= c.level + 10 : z.level <= c.level && z.maxLevel >= c.level))).sort((a, b) => Number(!!b.races) - Number(!!a.races) || Math.abs(a.level + (a.maxLevel - a.level) * .45 - c.level) - Math.abs(b.level + (b.maxLevel - b.level) * .45 - c.level));
   }
-  function dungeonCard(d, all = false) {
-    const c = character(),
-      quests = d.quests.filter(q => all || C.matchesCharacter(q, c));
-    return L.h`<article class="dungeon-card"><div class="dungeon-banner"><span class="dungeon-symbol">${icon('dungeon')}</span><div><div class="card-meta"><span class="level-tag">REK. ${d.level}–${d.maxLevel}</span><span>${d.short} · ${d.faction === 'Both' ? L.t('Båda factions') : d.faction}</span></div><h3>${esc(d.title)}</h3><small>${esc(d.zone)}</small></div></div><div class="dungeon-stats"><div><span>INTRÄDE ENLIGT DATABAS</span>${d.minLevel ? 'Level ' + d.minLevel : L.t('Behöver bekräftas')}</div><div><span>FÖR DIN LEVEL</span>${c.level < d.level ? d.minLevel && c.level >= d.minLevel ? L.t('Kan gå in · svårare') : L.t('Planera inför senare') : c.level <= d.maxLevel ? L.t('Inom rekommenderat intervall') : L.t('Över rekommenderat intervall')}</div></div><div class="dungeon-quests">${quests.length ? quests.map(q => L.h`<div class="dungeon-quest"><label class="step-row ${c.done[q.id] ? 'completed' : ''}"><input type="checkbox" data-check="${q.id}" ${c.done[q.id] ? 'checked' : ''}><span>${esc(q.title)} <span class="level-tag">LV ${q.level}${q.levelStatus ? ' ?' : ''}</span></span></label><small>${esc(q.location)} ${q.coords ? coordinate(q.coords) : ''}</small>${q.prereq ? L.h`<p><strong>Först:</strong> ${esc(q.prereq)}</p>` : ''}${q.reward ? L.h`<p>Belöning: ${esc(q.reward)}</p>` : ''}</div>`).join('') : L.h`<p class="small">${d.quests.length ? L.t('Inga quests för din valda karaktär i detta urval.') : L.t('Questlistan kompletteras. Öppna källan för mer information.')}</p>`}${d.partial ? L.m('<small>Urval av quests · fullständig lista kompletteras.</small>') : ''}${d.note ? L.h`<small>${esc(d.note)}</small>` : ''}${sourceLine(d)}${d.entrySource ? L.h`<a class="small" href="${esc(d.entrySource)}" target="_blank" rel="noopener noreferrer">Kontrollera inträdesuppgiften ${icon('external')}</a>` : ''}</div></article>`;
-  }
+  function dungeonCard(d,all=false) {
+ const c=character(),quests=d.quests.filter(q=>(all||C.matchesCharacter(q,c))&&Q.available(q,c,D.quests,C.questDone));
+ return `<article class="dungeon-card"><div class="dungeon-banner"><span class="dungeon-symbol">${icon('dungeon')}</span><div><div class="card-meta"><span class="level-tag">${bi('REC.','REK.')} ${d.level}–${d.maxLevel}</span><span>${esc(d.short)} · ${d.faction==='Both'?bi('Both factions','Båda factions'):esc(d.faction)}</span></div><h3>${esc(d.title)}</h3><small>${esc(d.zone)}</small></div></div><div class="dungeon-stats"><div><span>${bi('MINIMUM ENTRY LEVEL','LÄGSTA INTRÄDESLEVEL')}</span>${d.minLevel?'Level '+d.minLevel:bi('Not confirmed','Ej bekräftad')}</div><div><span>${bi('FOR YOUR LEVEL','FÖR DIN LEVEL')}</span>${c.level<d.level?bi('Plan for later','Planera inför senare'):c.level<=d.maxLevel?bi('Within recommended range','Inom rekommenderat intervall'):bi('Above recommended range','Över rekommenderat intervall')}</div></div><div class="dungeon-quests">${d.rangeEstimated?`<p class="content-caution">${bi('Estimated recommended range.','Uppskattat rekommenderat intervall.')}</p>`:''}${d.note?`<p class="small">${esc(d.note)}</p>`:''}${quests.length?quests.map(questCard).join(''):`<p class="small">${bi('No unlocked quests in this selection. Check the Quests list for prerequisite chains.','Inga upplåsta quests i detta urval. Se förquestkedjor i questlistan.')}</p>`}${sourceLine(d)}${state.settings.showSourceLinks&&d.entrySource?`<a class="small" href="${esc(d.entrySource)}" target="_blank" rel="noopener noreferrer">${bi('Entry source','Källa för inträdeskrav')} ${utilityIcon('external')}</a>`:''}</div></article>`;
+}
   function zoneCard(z, matchedPlace = '') {
     const desc = character().beginner && z.beginnerDesc ? z.beginnerDesc : z.desc;
     return L.h`<article class="zone-card"><div class="card-meta"><span class="level-tag">${z.isCity ? bi('CAPITAL CITY', 'HUVUDSTAD') : 'LEVEL ' + z.level + '–' + z.maxLevel}</span><span>${z.faction === 'Both' ? bi('Both factions', 'Båda factions') : esc(z.faction)}</span></div><span class="zone-icon">${icon('mountain')}</span><h3>${esc(z.title)}</h3>${matchedPlace && matchedPlace !== z.title ? L.h`<p class="small">${bi('Matched place', 'Matchad plats')}: <strong>${esc(matchedPlace)}</strong></p>` : ''}<p>${esc(desc)}</p>${character().beginner && character().helpLevel >= 2 ? L.h`<div class="route-hint">${icon('pin')}<span>${esc(z.travel)}</span></div>` : ''}<div class="zone-controls"><button class="secondary-button" data-select-zone="${esc(z.id)}" data-place="${esc(matchedPlace || z.title)}">${bi('I am here · show tips', 'Jag är här · visa tips')}</button></div>${sourceLine(z)}</article>`;
@@ -247,19 +248,18 @@
     return L.h`<div class="empty-state">${icon('compass')}<h3>${title}</h3><p>${text}</p><button class="secondary-button" data-view="all">Visa alla levels</button></div>`;
   }
   function heading() {
-    const c = character(),
-      n = nav.find(n => n[0] === page) || nav[0];
-    $('#page-heading').innerHTML = `<div class="heading-row"><h1>${c.blank ? bi('Create your character', 'Skapa din karaktär') : esc(L.t(n[1]))}</h1><button class="draft-badge" data-action="about">0.3.0</button></div>`;
-  }
+ const c=character(),n=nav.find(n=>n[0]===page)||nav[0];
+ $('#page-heading').innerHTML=`<div class="heading-row"><button class="icon-button mobile-menu" data-action="menu" aria-label="${bi('Open menu','Öppna menyn')}">${utilityIcon('menu')}</button><button class="icon-button" id="back-button" data-action="back" aria-label="${bi('Back','Tillbaka')}" ${navTrail.length?'':'disabled'}>${utilityIcon('back')}</button><h1>${c.blank?bi('Create your character','Skapa din karaktär'):esc(L.t(n[1]))}</h1><button class="draft-badge" data-action="about">0.4.0</button></div>`;
+}
   function renderShell() {
     applyPreferences();
     const c = character();
-    document.body.classList.toggle('compact', c.compact);
+
     $('#sidebar-character').innerHTML = L.h`<button class="character-switch" data-action="characters" aria-label="${bi('Switch or manage character', 'Byt eller hantera karaktär')}">${avatar(c)}<span class="character-copy"><strong>${esc(c.name || bi('New character', 'Ny karaktär'))}</strong><small>${c.blank ? '—' : 'Level ' + c.level + ' · ' + esc(klass().name)}</small></span>${icon('chevron')}</button>`;
-    $('#breadcrumb-character').textContent = c.name;
+
     $('#navigation').innerHTML = nav.map(([id, name, ic], i) => L.h`${i === 9 ? '<div class="nav-separator"></div>' : ''}<button data-page="${id}" class="${page === id ? 'active' : ''}" ${page === id ? 'aria-current="page"' : ''}>${icon(ic)}${esc(L.t(name))}</button>`).join('');
-    $('#back-button').disabled = !navTrail.length;
-    $('#compact-toggle').setAttribute('aria-pressed', c.compact);
+
+
     $('#filter-count').textContent = c.filters.categories.length;
     heading();
     renderContent();
@@ -275,7 +275,7 @@
       steps = b ? C.buildSteps(b, DB) : [],
       now = steps.find(s => s.level === c.level),
       next = steps.find(s => s.level > c.level),
-      q = D.quests.filter(q => q.classId && C.matchesCharacter(q, c) && !C.questDone(q, c) && q.level <= c.level + 10).sort((a, b) => Math.abs(a.level - c.level) - Math.abs(b.level - c.level))[0],
+      q = D.quests.filter(q => q.classId && C.matchesCharacter(q, c) && Q.available(q,c,D.quests,C.questDone) && !C.questDone(q, c) && q.level <= c.level + 10).sort((a, b) => Math.abs(a.level - c.level) - Math.abs(b.level - c.level))[0],
       ds = availableDungeons();
     return `<div class="summary-grid">${talentPointCard(bi('Talent at this level', 'Talent för denna level'), now, b)}${talentPointCard(bi('Next talent point', 'Nästa talentpoäng'), next, b)}<button class="summary-card" data-page="quests" ${c.filters.categories.includes('quests') ? '' : 'hidden'}><span class="summary-title">${icon('scroll')} ${bi('Class quest', 'Klassquest')}</span><strong>${q ? esc(q.title) : bi('All listed milestones completed', 'Alla noterade milstolpar klara')}</strong><small>${q ? 'Level ' + q.level : bi('Open class quests', 'Öppna klassquests')}</small></button><button class="summary-card" data-page="dungeons" ${c.filters.categories.includes('dungeons') ? '' : 'hidden'}><span class="summary-title">${icon('dungeon')} Dungeons</span><strong>${ds.length ? esc(ds[0].title) : bi('No dungeon in this range', 'Ingen dungeon i intervallet')}</strong><small>${bi('Open dungeon list', 'Öppna dungeonlistan')}</small></button></div>`;
   }
@@ -283,7 +283,7 @@
     const c = character(),
       tasks = actionableItems(),
       all = c.filters.view === 'all' || c.filters.showDone,
-      limit = all || c.helpLevel === 4 ? Infinity : c.compact ? 5 : c.helpLevel === 1 ? 3 : c.helpLevel === 2 ? 6 : 12,
+      limit = all || c.helpLevel === 4 ? Infinity : c.helpLevel === 1 ? 3 : c.helpLevel === 2 ? 6 : 12,
       zones = recommendedZones().slice(0, 2);
     return hero() + sessionPanel() + summary() + zoneOverview() + `<section><div class="section-top"><h2>${icon('scroll')} ${bi('To do now', 'Att göra nu')}</h2><button class="text-button" data-page="quests">${bi('All quests', 'Alla quests')} ${icon('arrow')}</button></div>${tabs()}<div class="quest-list">${tasks.length ? tasks.slice(0, limit).map(questCard).join('') : empty()}</div>${tasks.length > limit ? `<button class="text-button" data-page="quests">${bi('See more tasks', 'Se fler uppgifter')} ${icon('arrow')}</button>` : ''}</section>${!c.currentZone && c.filters.categories.includes('zones') ? `<section class="zone-section"><div class="section-top"><h2>${bi('Suggested zones', 'Föreslagna zoner')}</h2></div><div class="card-grid">${zones.map(z => zoneCard(z)).join('')}</div></section>` : ''}` + coverage();
   }
@@ -317,12 +317,12 @@
   }
   function abilitiesPage() {
     const c = character(),
-      abilities = DB.abilities.filter(a => visible(a) && inView(a) && (c.filters.showDone || !c.done[a.id]) && (c.filters.view !== 'now' || a.level >= c.level - 3)).sort((a, b) => b.level - a.level);
+      abilities = DB.abilities.filter(a => visible(a) && inView(a) && (c.filters.showDone || !c.done[a.id]) && (c.filters.view !== 'now' || a.level >= c.level - 3)).sort((a, b) => a.level - b.level);
     return tabs() + L.h`<div class="coverage-note">${icon('sparkles')}<span>Här visas första träningsnivån för varje förmåga. Högre ranks och träningskostnader kompletteras. Klassquests kan vara ett extra krav.</span></div><div class="quest-list">${abilities.length ? abilities.map(questCard).join('') : empty()}</div>`;
   }
   function gearPage() {
     const c = character(),
-      examples = D.quests.filter(q => q.classId && C.matchesCharacter(q, c) && q.reward && /Axe|Hauberk|Fist|Wolfsbane|Wand|Cloak|Ring/.test(q.reward));
+      examples = D.quests.filter(q => q.classId && C.matchesCharacter(q, c) && Q.available(q,c,D.quests,C.questDone) && q.reward && /Axe|Hauberk|Fist|Wolfsbane|Wand|Cloak|Ring/.test(q.reward));
     return L.h`<div class="info-card"><div class="card-meta"><span class="level-tag">${esc(c.role)}</span><span>${esc(klass().name)}</span></div><h2>Välj gear för det du spelar</h2><p style="margin-top:12px">Utgå från din valda specs aktuella klassguide. Vapnets egenskaper, användbara stats och förmågan att överleva behöver vägas ihop under leveling.</p><p>Fullständig statprioritering och dungeonloot för varje spec fylls på. Sparade Wowhead-builds ändrar inte automatiskt dessa råd.</p><a class="secondary-button" href="${esc(D.sources[c.classId])}" target="_blank" rel="noopener noreferrer">Öppna ${esc(klass().name)}-guiden ${icon('external')}</a></div><div class="section-top" style="margin-top:25px"><h2>Vapen och andra klassmål</h2></div><div class="quest-list">${examples.length ? examples.map(questCard).join('') : questCard({
       id: 'gear-class-review',
       category: 'gear',
@@ -335,11 +335,13 @@
     })}</div>` + coverage();
   }
   function professionsPage() {
-    const c = character(),
-      names = c.professions,
-      items = D.professions.filter(p => names.includes(p.title));
-    return L.h`<div class="info-card"><div class="section-top"><h2>Dina professions</h2><button class="text-button" data-action="edit-character">${icon('edit')} Välj professions</button></div><p>Välj dina professions i karaktärsprofilen. Här samlas campingrecept och påminnelser för dem.</p><div class="button-row">${names.map(n => L.h`<span class="level-tag">${esc(n)}</span>`).join('') || L.m('<span class="small">Inga professions valda ännu.</span>')}</div></div><div class="card-grid" style="margin-top:18px">${items.map(p => L.h`<article class="info-card"><div class="card-meta"><span class="level-tag">${esc(p.title)}</span></div><h3>${esc(p.item)}</h3><p>${esc(p.desc)}</p><label class="form-check"><input type="checkbox" data-check="${p.id}" ${c.done[p.id] ? 'checked' : ''}> Recept / upplåsning kontrollerad</label>${sourceLine(p)}</article>`).join('')}</div><div style="margin-top:20px">${questCard(D.quests.find(q => q.id === 'camp-outdoors'))}</div>`;
-  }
+ const c=character(),names=c.professions,P=window.ProfessionPlanner;
+ const intro=`<section class="info-card"><div class="section-top"><h2>${bi('Your professions','Dina professions')}</h2><button class="text-button" data-action="edit-character">${utilityIcon('edit')} ${bi('Choose professions','Välj professions')}</button></div><p>${bi('Enter your base skill, without temporary bonuses. Each character keeps its own values.','Ange grundskill utan tillfälliga bonusar. Varje karaktär har egna värden.')}</p>${names.length?`<div class="profession-skills">${names.map(n=>`<label class="profession-skill-field">${gameIcon(window.GAME_ASSETS.professions[n])}<span>${esc(n)}<small>${R.secondary.includes(n)?bi('Secondary','Secondary'):bi('Primary','Primary')}</small></span><input type="number" min="1" max="300" step="1" inputmode="numeric" data-profession-skill="${esc(n)}" value="${c.professionSkills?.[n]??''}" placeholder="—" aria-label="${esc(n)} ${bi('current skill','nuvarande skill')}"><small>/ 300</small></label>`).join('')}</div>`:`<p>${bi('Choose professions to track their skills and see material plans.','Välj professions för att följa skill och se materialplaner.')}</p>`}</section>`;
+ const plans=names.filter(n=>R.secondary.includes(n)).map(n=>professionMaterials(n)).join('');
+ const gear=professionGear();
+ const items=D.professions.filter(p=>names.includes(p.title));
+ return intro+plans+gear+`<section class="profession-section"><h2>${bi('Camping features','Campingföremål')}</h2><div class="card-grid">${items.map(p=>`<article class="info-card"><div class="card-meta">${gameIcon(window.GAME_ASSETS.professions[p.title])}<span>${esc(p.title)}</span></div><h3>${esc(p.item)}</h3><p>${esc(p.desc)}</p><label class="form-check"><input type="checkbox" data-check="${esc(p.id)}" ${c.done[p.id]?'checked':''}> ${bi('Recipe / unlock checked','Recept / upplåsning kontrollerad')}</label>${sourceLine(p)}</article>`).join('')}</div></section><div style="margin-top:20px">${questCard(D.quests.find(q=>q.id==='camp-outdoors'))}</div>`;
+}
   function glossaryPage() {
     return L.h`<div class="beginner-note" style="margin-bottom:20px"><h3>${icon('sprout')} Börja enkelt</h3><p>Prata med figurer som har uppdrag, läs din questlogg och prova förmågorna i lugn takt. Välj din karaktärs riktiga level med + och −. Bocka av sådant du gjort. Inför en dungeon: bestäm roller och hämta uppdragen tillsammans.</p></div><div class="glossary-grid">${D.glossary.map(t => L.h`<article class="glossary-term"><h3>${esc(t.title)}</h3><p>${esc(t.desc)}</p></article>`).join('')}</div>`;
   }
@@ -360,7 +362,7 @@
       zoneMap = new Map();
     for (const r of zoneMatches) if (!zoneMap.has(r.zoneId)) zoneMap.set(r.zoneId, r.label);
     const all = [...D.quests, ...D.misc, ...D.dungeons, ...D.zones, ...DB.abilities, ...D.professions, ...D.glossary, ...D.controls, ...talents];
-    const results = all.filter(item => T.visibleAtHelp(item, c) && (searchEveryone || item.category === 'zones' || C.matchesCharacter(item, c)) && (item.category === 'zones' ? zoneMap.has(item.id) : tokens.every(t => T.normalise(JSON.stringify([item.title, item.desc, item.steps, item.quests, item.location, item.reward, item.item, item.aliases, item.keys?.map(controlLabel)])).includes(t))));
+    const results = all.filter(item => Q.available(item,c,D.quests,C.questDone) && T.visibleAtHelp(item, c) && (searchEveryone || item.category === 'zones' || C.matchesCharacter(item, c)) && (item.category === 'zones' ? zoneMap.has(item.id) : tokens.every(t => T.normalise(JSON.stringify([item.title, item.desc, item.steps, item.quests, item.location, item.reward, item.item, item.aliases, item.keys?.map(controlLabel)])).includes(t))));
     return L.h`<div class="section-top"><h2>${results.length} ${bi('results for', 'träffar för')} ”${esc(query)}”</h2><button class="text-button" data-action="clear-search">${bi('Clear search', 'Rensa sökning')} ${icon('close')}</button></div><div class="quest-list">${results.length ? results.slice(0, 100).map(item => item.category === 'controller' ? controllerCard(item) : item.category === 'dungeons' ? dungeonCard(item, searchEveryone) : item.category === 'zones' ? zoneCard(item, zoneMap.get(item.id)) : item.category === 'glossary' ? L.h`<article class="glossary-term"><h3>${esc(item.title)}</h3><p>${esc(item.desc)}</p></article>` : item.category === 'talents' ? L.h`<article class="info-card"><div class="card-meta">${bi('TALENT', 'TALANG')} · ${esc(DB.classes[item.classId].name)} · ${esc(item.desc)}</div><h3>${esc(item.title)}</h3>${sourceLine(item)}</article>` : questCard(item)).join('') : empty(bi('No result yet', 'Ingen träff ännu'), bi('Try a zone, subzone, English game name or controller function.', 'Prova en zon, subzon, ett engelskt spelnamn eller en handkontrollsfunktion.'))}</div>`;
   }
   function renderContent() {
@@ -484,10 +486,7 @@
     if (target.dataset.talent) {
       const [tree, index] = target.dataset.talent.split(':').map(Number),
         tal = klass().trees[tree]?.talents[index];
-      if (tal) dialog(esc(tal.name), `<div class="talent-detail">${gameIcon(window.GAME_ASSETS.talents[tal.id])}<p>${positionLabel({
-        ...tal,
-        treeName: klass().trees[tree].name
-      })}</p><p>${bi('Requires', 'Kräver')} ${tal.required} ${bi('points in this tree', 'poäng i trädet')} · ${bi('Ability minimum level', 'Förmågans lägsta level')} ${tal.minLevel}</p>${tal.requires.length ? `<p>${bi('Prerequisites', 'Förkrav')}: ${tal.requires.map(r => esc(klass().trees[tree].talents.find(t => t.id === r.id)?.name || r.id)).join(', ')}</p>` : ''}<a href="https://www.wowhead.com/forever/spell=${tal.spell}" target="_blank" rel="noopener noreferrer">Wowhead ${icon('external')}</a></div>`);
+      if (tal) dialog(esc(tal.name),talentInfo(tree,index));
       return;
     }
     if (target.dataset.page) {
@@ -550,11 +549,7 @@
       save();
       renderShell();
       notify(c.beginner ? L.t('Nybörjarläge på.') : L.t('Nybörjarläge av.'));
-    } else if (a === 'compact') {
-      c.compact = !c.compact;
-      save();
-      renderShell();
-      notify(c.compact ? L.t('Kompakt spelläge på.') : L.t('Vanligt läge på.'));
+
     } else if (a === 'characters') charactersDialog();else if (a === 'new-character') characterForm(false);else if (a === 'edit-character') characterForm(true);else if (a === 'close-dialog') $('#dialog').close();else if (a === 'filters') filterDialog();else if (a === 'all-categories') {
       c.filters.categories = [...C.CATEGORIES];
       save();
@@ -656,7 +651,7 @@
     const c = character(),
       z = D.zones.find(z => z.id === c.currentZone);
     if (!z) return sessionPanel() + L.h`<div class="empty-state">${icon('map')}<h2>${bi('Choose a zone to see local guidance', 'Välj en zon för att se lokal hjälp')}</h2><p>${bi('You can search using a town or subzone name too.', 'Du kan även söka med namnet på en ort eller subzon.')}</p><button class="primary-button" data-action="choose-zone">${bi('Find my zone', 'Hitta min zon')}</button></div>`;
-    const qs = T.questsForZone(D, z, c, C.matchesCharacter).filter(q => c.filters.categories.includes(q.category) && (c.filters.showDone || !C.questDone(q, c)) && (c.filters.view === 'all' || q.level <= c.level + 10));
+    const qs = T.questsForZone(D, z, c, C.matchesCharacter).filter(q => Q.available(q,c,D.quests,C.questDone) && c.filters.categories.includes(q.category) && (c.filters.showDone || !C.questDone(q, c)) && (c.filters.view === 'all' || q.level <= c.level + 10)).sort((a,b)=>a.level-b.level||a.title.localeCompare(b.title));
     const dungeons = D.dungeons.filter(d => z.dungeonIds.includes(d.id) && (d.faction === 'Both' || d.faction === c.faction));
     const localSteps = z.localSteps || [];
     let html = L.h`<section class="info-card zone-guide-intro"><div class="zone-heading"><div><div class="eyebrow">${bi('YOUR CURRENT ZONE', 'DIN NUVARANDE ZON')}</div><h2>${esc(z.title)}</h2></div><button class="secondary-button" data-action="choose-zone">${bi('Change zone', 'Byt zon')}</button></div>${c.currentPlace && c.currentPlace !== z.title ? L.h`<p>${esc(c.currentPlace)} ${bi('is part of', 'är en del av')} <strong>${esc(z.title)}</strong>.</p>` : ''}<p>${esc(c.beginner && z.beginnerDesc ? z.beginnerDesc : z.desc)}</p><div class="card-meta"><span class="level-tag">${z.isCity ? bi('Capital city', 'Huvudstad') : 'Level ' + z.level + '–' + z.maxLevel}</span><span>${c.level < z.level ? bi('You are below this zone’s listed range.', 'Du är under zonens angivna intervall.') : c.level > z.maxLevel ? bi('You are above this zone’s listed range.', 'Du är över zonens angivna intervall.') : bi('Your level is within the listed range.', 'Din level ligger inom det angivna intervallet.')}</span></div>${z.faction !== 'Both' && z.faction !== c.faction ? L.h`<p class="error-text">${bi('This zone is mainly associated with', 'Zonen hör främst till')} ${esc(z.faction)}.</p>` : ''}${sourceLine(z)}</section>`;
@@ -726,7 +721,7 @@
       settings: bi('Game settings', 'Spelinställningar'),
       classes: bi('Class functions', 'Klassfunktioner')
     };
-    return L.h`<article class="controller-card"><div class="controller-group">${groups[item.group] || item.group}</div><h3>${esc(item.title)}</h3><div class="controller-keys">${item.keys.map((k, i) => L.h`${i ? '<span aria-hidden="true">' + icon('arrow') + '</span>' : ''}<kbd>${esc(controlLabel(k))}</kbd>`).join('')}</div><p>${esc(item.desc)}</p><a class="small" href="${esc(item.source)}" target="_blank" rel="noopener noreferrer">${bi('Client source', 'Klientkälla')} ${icon('external')}</a></article>`;
+    return L.h`<article class="controller-card"><div class="controller-group">${groups[item.group] || item.group}</div><h3>${esc(item.title)}</h3><div class="controller-keys">${item.keys.map((k, i) => L.h`${i ? '<span aria-hidden="true">' + icon('arrow') + '</span>' : ''}<kbd>${esc(controlLabel(k))}</kbd>`).join('')}</div><p>${esc(item.desc)}</p>${state.settings.showSourceLinks?`<a class="small" href="${esc(item.source)}" target="_blank" rel="noopener noreferrer">${bi('Client source','Klientkälla')} ${utilityIcon('external')}</a>`:''}</article>`;
   }
   function controllerMatches(item, value) {
     const tokens = T.normalise(value).split(/\s+/).filter(Boolean);
@@ -738,11 +733,11 @@
   }
   function preferencesMarkup() {
     const c = character();
-    return L.h`<section class="settings-preferences"><h3>${bi('Language and appearance', 'Språk och utseende')}</h3><div class="form-grid"><label class="form-field"><span>${bi('Language', 'Språk')}</span><select id="language-select"><option value="en" ${state.settings.language === 'en' ? 'selected' : ''}>English</option><option value="sv" ${state.settings.language === 'sv' ? 'selected' : ''}>Svenska</option></select></label><label class="form-field"><span>${bi('Color theme', 'Färgtema')}</span><select id="theme-select">${[['forest', bi('Forest', 'Skog')], ['dark', 'Dark / OLED'], ['light', bi('Light', 'Ljust')], ['frost', 'Frost'], ['parchment', bi('Parchment', 'Pergament')]].map(([id, name]) => L.h`<option value="${id}" ${state.settings.theme === id ? 'selected' : ''}>${name}</option>`).join('')}</select></label></div><h3>${bi('How much help would you like?', 'Hur mycket hjälp vill du ha?')}</h3>${helpControl('settings')}<label class="form-check"><input id="beginner-setting" type="checkbox" ${c.beginner ? 'checked' : ''}> ${bi('Beginner mode: explain names and show basic reminders', 'Nybörjarläge: förklara namn och visa grundläggande påminnelser')}</label><p class="field-hint">${bi('Assistance and beginner explanations are separate. Each character keeps its own assistance level; language and theme apply to this browser.', 'Hjälpnivå och nybörjarförklaringar är separata. Varje karaktär har egen hjälpnivå; språk och tema gäller i den här webbläsaren.')}</p></section>`;
+    return L.h`<section class="settings-preferences"><h3>${bi('Language and appearance', 'Språk och utseende')}</h3><div class="form-grid"><label class="form-field"><span>${bi('Language', 'Språk')}</span><select id="language-select"><option value="en" ${state.settings.language === 'en' ? 'selected' : ''}>English</option><option value="sv" ${state.settings.language === 'sv' ? 'selected' : ''}>Svenska</option></select></label><label class="form-field"><span>${bi('Color theme', 'Färgtema')}</span><select id="theme-select">${[['forest', bi('Forest', 'Skog')], ['dark', 'Dark / OLED'], ['light', bi('Light', 'Ljust')], ['frost', 'Frost'], ['parchment', bi('Parchment', 'Pergament')]].map(([id, name]) => L.h`<option value="${id}" ${state.settings.theme === id ? 'selected' : ''}>${name}</option>`).join('')}</select></label></div><label class="form-check"><input id="source-links-setting" type="checkbox" ${state.settings.showSourceLinks?'checked':''}> ${bi('Show source links','Visa källänkar')}</label><h3>${bi('How much help would you like?', 'Hur mycket hjälp vill du ha?')}</h3>${helpControl('settings')}<label class="form-check"><input id="beginner-setting" type="checkbox" ${c.beginner ? 'checked' : ''}> ${bi('Beginner mode: explain names and show basic reminders', 'Nybörjarläge: förklara namn och visa grundläggande påminnelser')}</label><p class="field-hint">${bi('Assistance and beginner explanations are separate. Each character keeps its own assistance level; language and theme apply to this browser.', 'Hjälpnivå och nybörjarförklaringar är separata. Varje karaktär har egen hjälpnivå; språk och tema gäller i den här webbläsaren.')}</p></section>`;
   }
   function gameIcon(name, alt = '', extra = '') {
     const src = window.GAME_ASSETS?.icons[name];
-    return src ? `<img class="game-icon ${extra}" src="${src}" alt="${esc(alt)}" width="36" height="36">` : icon('sparkles');
+    return src ? `<img class="game-icon ${extra}" src="${src}" alt="${esc(alt)}" width="36" height="36">` : utilityIcon('sparkles');
   }
   function welcome() {
     return `<section class="empty-state setup-card">${icon('plus')}<h2>${bi('No character configured', 'Ingen karaktär skapad')}</h2><button class="primary-button" data-action="edit-character">${bi('Create character', 'Skapa karaktär')}</button></section>`;
@@ -758,20 +753,24 @@
     const c = character(),
       z = D.zones.find(z => z.id === c.currentZone);
     if (!z) return '';
-    const qs = T.questsForZone(D, z, c, C.matchesCharacter).filter(q => c.filters.categories.includes(q.category) && (c.filters.showDone || !C.questDone(q, c)) && q.level <= c.level + 10).sort((a, b) => a.level - b.level),
+    const qs = T.questsForZone(D, z, c, C.matchesCharacter).filter(q => Q.available(q,c,D.quests,C.questDone) && c.filters.categories.includes(q.category) && (c.filters.showDone || !C.questDone(q, c)) && q.level <= c.level + 10).sort((a, b) => a.level - b.level),
       ds = c.filters.categories.includes('dungeons') ? D.dungeons.filter(d => z.dungeonIds.includes(d.id) && C.matchesCharacter(d, c) && (c.helpLevel === 4 || d.level <= c.level + 10)) : [],
       steps = c.filters.categories.includes('tips') && c.helpLevel >= 2 ? (z.localSteps || []).slice(0, c.helpLevel === 2 ? 2 : undefined) : [];
     return `<section class="zone-overview info-card"><div class="section-top"><h2>${icon('map')} ${bi('Tips for', 'Tips för')} ${esc(z.title)}</h2><button class="text-button" data-page="zone-guide">${bi('More zone details', 'Mer om zonen')} ${icon('arrow')}</button></div><p>${esc(c.beginner && z.beginnerDesc ? z.beginnerDesc : z.desc)}</p>${z.faction !== 'Both' && z.faction !== c.faction ? `<p class="error-text">${bi('Mainly associated with', 'Hör främst till')} ${esc(z.faction)}</p>` : ''}${steps.length ? `<ol class="zone-route">${steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>` : ''}${qs.length ? `<div class="quest-list">${qs.map(questCard).join('')}</div>` : ''}${ds.map(d => `<details class="zone-dungeon" ${c.helpLevel >= 3 ? 'open' : ''}><summary>${esc(d.title)} · Level ${d.level}–${d.maxLevel} · ${bi('Quests and preparation', 'Quests och förberedelser')}</summary>${dungeonCard(d)}</details>`).join('')}${sourceLine(z)}</section>`;
   }
   function talentTrees(b) {
-    const c = character(),
-      steps = C.buildSteps(b, DB),
-      spent = klass().trees.map(t => t.talents.map(() => 0)),
-      now = steps.find(s => s.level === c.level),
-      next = steps.find(s => s.level > c.level);
-    steps.filter(s => s.level <= c.level).forEach(s => spent[s.tree][s.index]++);
-    return `<section class="talent-tree-section"><h2>${bi('Talent trees', 'Talentträd')}</h2><p class="small">${bi('Ranks show your imported plan through the current level. Click a talent for its position and requirements.', 'Ranks visar din importerade plan till nuvarande level. Klicka en talent för placering och förkrav.')}</p><div class="tree-legend"><span class="current-marker">${bi('This level', 'Denna level')}</span><span class="next-marker">${bi('Next point', 'Nästa poäng')}</span></div><div class="talent-trees">${klass().trees.map((t, tree) => `<section class="talent-tree"><h3>${esc(t.name)}</h3><div class="talent-grid" style="--tree-rows:${Math.max(...t.talents.map(x => x.row)) + 1}">${t.talents.map((tal, index) => `<button class="talent-node ${spent[tree][index] ? 'learned' : ''} ${now?.tree === tree && now.index === index ? 'current-point' : ''} ${next?.tree === tree && next.index === index ? 'next-point' : ''}" data-talent="${tree}:${index}" style="grid-row:${tal.row + 1};grid-column:${tal.col + 1}" aria-label="${esc(tal.name)}, ${esc(t.name)}, ${bi('row', 'rad')} ${tal.row + 1}, ${bi('column', 'kolumn')} ${tal.col + 1}, ${spent[tree][index]}/${tal.max}" title="${esc(tal.name)} · ${bi('Planned total', 'Planerad slutrank')} ${b.allocations[tree][index]}/${tal.max}">${gameIcon(window.GAME_ASSETS.talents[tal.id])}<span class="talent-node-rank">${spent[tree][index]}/${tal.max}</span><span class="talent-node-name">${esc(tal.name)}</span></button>`).join('')}</div></section>`).join('')}</div></section>`;
-  }
+ const c=character(),steps=C.buildSteps(b,DB),spent=talentRanks(),now=steps.find(s=>s.level===c.level),next=steps.find(s=>s.level>c.level);
+ return `<section class="talent-tree-section"><h2>${bi('Talent trees','Talentträd')}</h2><p class="small">${bi('Ranks show your plan through the current level. Hover or focus for effects; tap to open details.','Ranks visar planen till nuvarande level. Håll musen över eller fokusera för effekttext; tryck för detaljer.')}</p><div class="tree-legend"><span class="current-marker">${bi('This level','Denna level')}</span><span class="next-marker">${bi('Next point','Nästa poäng')}</span></div><div class="talent-trees">${klass().trees.map((t,tree)=>{
+ const rows=Math.max(...t.talents.map(x=>x.row))+1,w=280,h=rows*64+20;
+ const arrows=t.talents.flatMap(tal=>tal.requires.map(r=>{
+  const from=t.talents.find(x=>x.id===r.id);if(!from)return '';
+  const x1=35+from.col*70,y1=42+from.row*64,x2=35+tal.col*70,y2=tal.row*64+8;
+  const route=from.col===tal.col?`M${x1} ${y1} V${y2}`:`M${x1} ${y1} V${y1+17} H${x2} V${y2}`;
+  return `<path class="${spent[tree][t.talents.indexOf(from)]>=r.qty?'met':''}" d="${route}" marker-end="url(#arrow-${tree})"/>`;
+ })).join('');
+ return `<section class="talent-tree"><h3>${esc(t.name)} <span>${spent[tree].reduce((a,b)=>a+b,0)}</span></h3><div class="talent-board" style="--tree-background:url('./assets/talents/${t.id}.jpg');--tree-height:${h}px"><svg class="talent-arrows" viewBox="0 0 ${w} ${h}" aria-hidden="true"><defs><marker id="arrow-${tree}" markerWidth="6" markerHeight="6" refX="4" refY="3" orient="auto"><path d="M0 0 5 3 0 6Z" fill="context-stroke"/></marker></defs>${arrows}</svg><div class="talent-grid" style="--tree-rows:${rows}">${t.talents.map((tal,index)=>`<button class="talent-node ${spent[tree][index]?'learned':''} ${now?.tree===tree&&now.index===index?'current-point':''} ${next?.tree===tree&&next.index===index?'next-point':''}" data-talent="${tree}:${index}" data-tooltip="${tree}:${index}" style="grid-row:${tal.row+1};grid-column:${tal.col+1}" aria-label="${esc(tal.name)}, ${esc(t.name)}, ${spent[tree][index]}/${tal.max}">${gameIcon(window.GAME_ASSETS.talents[tal.id])}<span class="talent-node-rank">${spent[tree][index]}/${tal.max}</span><span class="sr-only">${esc(tal.name)}</span></button>`).join('')}</div></div></section>`;
+ }).join('')}</div></section>`;
+}
   function updateCharacterOptions(preferredRace, preferredRole) {
     const form = $('#character-form');
     if (!form) return;
@@ -813,6 +812,68 @@
       behavior: 'instant'
     });
   }
+function rewardPreview(q) {
+ const c=character(),later=[...Q.laterRewards(q,c,D.quests,C.matchesCharacter,C.questDone),...(q.laterRewardHints||[])];
+ return later.length?`<div class="chain-preview"><strong>${bi('Later in this chain','Senare i kedjan')}</strong>${later.map(x=>`<p><span>${esc(x.title)}</span> · ${esc(x.reward)}</p>`).join('')}</div>`:'';
+}
+function talentRanks() {
+ const b=activeBuild(),spent=klass().trees.map(t=>t.talents.map(()=>0));
+ if(b)C.buildSteps(b,DB).filter(s=>s.level<=character().level).forEach(s=>spent[s.tree][s.index]++);
+ return spent;
+}
+function talentInfo(tree,index) {
+ const t=klass().trees[tree],tal=t?.talents[index];if(!tal)return '';
+ const rank=talentRanks()[tree][index],effects=window.TALENT_TEXT[tal.id]||{},shown=rank||1;
+ return `<div class="talent-detail"><div class="talent-tooltip-heading">${gameIcon(window.GAME_ASSETS.talents[tal.id])}<div><h3>${esc(tal.name)}</h3><span>${bi('Rank','Rank')} ${rank}/${tal.max}</span></div></div><p class="talent-tooltip-meta">${positionLabel({...tal,treeName:t.name})}</p><p>${bi('Requires','Kräver')} ${esc(klass().name)} · ${tal.required} ${bi('points in this tree','poäng i trädet')}</p>${tal.requires.length?`<p>${bi('Prerequisites','Förkrav')}: ${tal.requires.map(r=>`${esc(t.talents.find(x=>x.id===r.id)?.name||r.id)} (${r.qty})`).join(', ')}</p>`:''}${!rank?`<small>${bi('First rank','Första ranken')}</small>`:''}<p class="talent-effect">${esc(effects[shown]||bi('Effect text is not available for this rank.','Effekttext saknas för denna rank.'))}</p>${rank&&rank<tal.max?`<small>${bi('Next rank','Nästa rank')} (${rank+1}/${tal.max})</small><p class="talent-effect">${esc(effects[rank+1]||'')}</p>`:''}${state.settings.showSourceLinks?`<a href="https://www.wowhead.com/forever/spell=${tal.spell}" target="_blank" rel="noopener noreferrer">Wowhead ${utilityIcon('external')}</a>`:''}</div>`;
+}
+function hideTalentTooltip(){document.querySelectorAll('[aria-describedby="talent-tooltip"]').forEach(x=>x.removeAttribute('aria-describedby'));const el=$('#talent-tooltip');if(el){el.hidden=true;el.removeAttribute('data-owner');}}
+function showTalentTooltip(target){
+ const key=target.dataset.tooltip;if(!key)return;const [tree,index]=key.split(':').map(Number),el=$('#talent-tooltip');if(!el)return;
+ target.setAttribute('aria-describedby','talent-tooltip');el.innerHTML=talentInfo(tree,index);el.hidden=false;el.dataset.owner=key;
+ const rect=target.getBoundingClientRect(),box=el.getBoundingClientRect();
+ el.style.left=Math.max(8,Math.min(rect.right+12,window.innerWidth-box.width-8))+'px';
+ el.style.top=Math.max(8,Math.min(rect.top,window.innerHeight-box.height-8))+'px';
+}
+function professionMaterials(name) {
+ const P=window.ProfessionPlanner,c=character(),skill=c.professionSkills?.[name],rows=P.shopping(name,skill);
+ let body='';
+ if(name==='Fishing'){
+  const routes=P.fishingZones.filter(s=>!skill||s.to>skill);
+  body=`<p>${bi('Leveling materials required: 0. Fishing skill rises through successful catches, not by consuming crafting materials. Lures and a fishing pole are tools; fish you catch can be saved for Cooking.','Material som krävs för leveling: 0. Fishing ökar genom lyckade fångster, inte genom att förbruka craftingmaterial. Bete och fiskespö är redskap; fisken du fångar kan sparas till Cooking.')}</p>${routes.length?`<ol class="profession-route">${routes.map(s=>`<li><strong>${Math.max(skill||1,s.from)}–${s.to}</strong><span>${esc(L.t(s.place))}</span></li>`).join('')}</ol>`:`<p>${bi('Your entered Fishing skill is already 300.','Din angivna Fishing-skill är redan 300.')}</p>`}<p class="field-hint">${bi('The Cooking plan below/above lists raw fish worth saving and the estimated number needed for that route. Those quantities belong to Cooking and are not an extra Fishing requirement.','Cooking-planen nedan/ovan visar råfisk att spara och uppskattat antal för den rutten. Mängderna hör till Cooking och är inget extra Fishing-krav.')}</p>`;
+  if(!c.professions.includes('Cooking'))body+=`<p class="small">${bi('Add Cooking to your selected professions to get a fish-saving budget.','Lägg till Cooking bland dina valda professions för att få en fiskbudget.')}</p>`;
+ }else if(!skill){body=`<p>${bi('Set your current skill above to calculate what to save for the current and future stages.','Ange din nuvarande skill ovan för att beräkna vad du ska spara för nuvarande och framtida steg.')}</p>`;
+ }else{
+  body=`<p>${name==='Cooking'?bi('Selected route: fish recipes.','Vald rutt: fiskrecept.'):bi('Selected route: cloth bandages.','Vald rutt: tygbandage.')} ${bi('Amounts cover remaining leveling only. Extra food, healing supplies, camping crafts and crafted gear are excluded.','Mängderna gäller endast återstående leveling. Extra mat, healingförråd, campingföremål och craftad utrustning ingår inte.')}</p><p class="field-hint">${bi('Estimates, not guaranteed totals: yellow/green skill-ups vary. Partly completed stages are scaled from the guide’s full-stage budget and rounded up. Inventory is not subtracted.','Uppskattningar, inte garanterade totalsiffror: gula/gröna skillökningar varierar. Delvis klara steg beräknas proportionellt från guidens budget och avrundas uppåt. Ditt lager dras inte av.')}</p>`;
+  for(const preliminary of [false,true]){
+   const group=rows.filter(r=>r.preliminary===preliminary);if(!group.length)continue;
+   body+=`<h3>${preliminary?bi('225–300 · preliminary Classic budget','225–300 · preliminär Classic-budget'):bi('Forever route through 225','Forever-rutt till 225')}</h3>${preliminary?`<p class="content-caution">${bi('The Forever leveling guide stops at 225. This is a Classic fallback for planning; confirm recipes before buying. First Aid phase quantities divide the Classic 80–100 cloth budgets into estimated stages.','Forevers levelingguide slutar vid 225. Detta är en Classic-baserad planering; kontrollera recepten före inköp. First Aid-mängderna delar upp Classics tygbudget på 80–100 i uppskattade steg.')}</p>`:''}<div class="material-table-wrap"><table class="material-table"><thead><tr><th>${bi('Save material','Spara material')}</th><th>${bi('Now','Nu')}</th><th>${bi('Future','Framöver')}</th><th>${bi('Total','Totalt')}</th></tr></thead><tbody>${group.map(r=>`<tr><th scope="row">${esc(r.name)}<small>${bi('Skill','Skill')} ${r.ranges.map(x=>x.join('–')).join(', ')}</small></th><td>${r.current||'—'}</td><td>${r.future||'—'}</td><td><strong>≈ ${r.total}</strong></td></tr>`).join('')}</tbody></table></div>${sourceLine({source:group[0].source,status:preliminary?'preliminary':'sourced',updated:'2026-10-27'})}`;
+  }
+  if(!rows.length)body+=`<p>${bi('No materials remain on this route at skill 300.','Inget material återstår på denna rutt vid skill 300.')}</p>`;
+  const steps=(P.routes[name]||[]).filter(s=>s.to>skill);
+  if(steps.length)body+=`<details class="profession-recipe-details"><summary>${bi('Recipes for the remaining stages','Recept för återstående steg')}</summary><ol class="profession-route">${steps.map(s=>`<li><strong>${Math.max(skill,s.from)}–${s.to}</strong><span>${esc(s.recipe)}${s.preliminary?' · '+bi('preliminary','preliminärt'):''}</span></li>`).join('')}</ol></details>`;
+ }
+ body+=professionTraining(name,skill||1);
+ return `<section class="info-card profession-section"><div class="section-top"><h2>${gameIcon(window.GAME_ASSETS.professions[name])} ${esc(name)} · ${bi('materials to save','material att spara')}</h2><span class="level-tag">${skill||'—'} / 300</span></div>${body}${name==='Fishing'?sourceLine({source:P.sources.Fishing,status:'sourced',updated:'2026-10-27'}):''}</section>`;
+}
+function professionTraining(name,skill) {
+ const c=character();let content='';
+ if(name==='Cooking'){
+  if(skill<150)content+=`<p>${bi('At 150: Expert Cookbook. Alliance: Shandrina, Ashenvale. Horde: Wulan, Shadowprey Village.','Vid 150: Expert Cookbook. Alliance: Shandrina, Ashenvale. Horde: Wulan, Shadowprey Village.')}</p>`;
+  if(skill<=225)content+=`<p>${bi('For Artisan (character level 35, skill 225): Clamlette Surprise in Gadgetzan. Save these separately from the recipe budget:','För Artisan (karaktärslevel 35, skill 225): Clamlette Surprise i Gadgetzan. Spara detta separat från receptbudgeten:')}</p><ul><li>12 × Giant Egg</li><li>10 × Zesty Clam Meat</li><li>20 × Alterac Swiss</li></ul>`;
+ }else if(name==='First Aid'){
+  if(skill<225)content+=`<p>${bi('Before 150: buy Expert First Aid – Under Wraps and the Heavy Silk / Mageweave manuals.','Före 150: köp Expert First Aid – Under Wraps och manualerna för Heavy Silk / Mageweave.')} ${c.faction==='Alliance'?'Deneb Walker · Stromgarde Keep':'Balai Lok’Wein · Brackenwall Village'}.</p>`;
+  if(skill<=225)content+=`<p>${bi('Artisan: character level 35 and skill 225. Complete Triage; the doctor provides the quest bandages, so do not reserve ordinary cloth for the quest.','Artisan: karaktärslevel 35 och skill 225. Gör Triage; läkaren ger questbandagen, så spara inte vanligt tyg till själva questen.')} ${c.faction==='Alliance'?'Doctor Gustaf VanHowzen · Theramore':'Doctor Gregory Victor · Hammerfall'}.</p>`;
+ }else if(name==='Fishing'){
+  if(skill<225)content+=`<p>${bi('At 150: Expert Fishing – The Bass and You, sold by Old Man Heming in Booty Bay.','Vid 150: Expert Fishing – The Bass and You, säljs av Old Man Heming i Booty Bay.')}</p>`;
+  if(skill<=225)content+=`<p>${bi('At character level 35 and skill 225: Nat Pagle, Angler Extreme. Catch one of each quest fish after accepting the quest; they cannot be stockpiled beforehand.','Vid karaktärslevel 35 och skill 225: Nat Pagle, Angler Extreme. Fånga en av varje questfisk efter att ha hämtat questen; de kan inte sparas i förväg.')}</p><ul><li>1 × Feralas Ahi · Feralas</li><li>1 × Misty Reed Mahi Mahi · Swamp of Sorrows</li><li>1 × Sar’theris Striker · Desolace</li><li>1 × Savage Coast Blue Sailfin · Stranglethorn Vale</li></ul>`;
+ }
+ return content?`<details class="profession-training"><summary>${bi('Training and unlocks · separate from leveling crafts','Träning och upplåsningar · separat från levelingcrafts')}</summary>${content}</details>`:'';
+}
+function professionGear(){
+ const c=character(),P=window.ProfessionPlanner,b=activeBuild(),focus=P.focus(c,b,DB),items=P.suggestions(c,b,DB);
+ const groups=[...new Set(items.map(x=>x.profession))];
+ return `<section class="profession-section"><div class="section-top"><h2>${bi('Crafted gear for your character','Craftad utrustning för din karaktär')}</h2></div><p class="small">${esc(klass().name)} · ${esc(c.role)}${focus.spec?' · '+esc(focus.spec):''}${focus.fromBuild?' · '+bi('based on','utifrån')+' '+esc(b.name):''}</p><p class="field-hint">${bi('Examples from current level-30 class guides. These are upgrade candidates, not a complete endgame ranking. Check item level, recipe access, binding and cost before crafting.','Exempel från aktuella klassguider för level 30. Detta är uppgraderingskandidater, inte en komplett slutspelsrankning. Kontrollera användningslevel, recept, bindning och kostnad före crafting.')}${!focus.spec?' '+bi('Import a talent build to narrow school-specific options.','Importera en talentbuild för att avgränsa skolspecifika alternativ.'):''}${focus.hybrid?' '+bi('For a hybrid build, suggestions follow your selected role and the strongest relevant tree.','För en hybridbuild följer förslagen vald roll och det starkaste relevanta trädet.'):''}</p>${items.length?groups.map(prof=>`<h3>${gameIcon(window.GAME_ASSETS.professions[prof])} ${esc(prof)}</h3><div class="crafted-grid">${items.filter(g=>g.profession===prof).map(g=>`<article class="info-card crafted-card"><div class="card-meta"><span class="level-tag">${esc(g.spec)}</span><span>${bi('Guide level','Guidelevel')} ${g.guideLevel}</span></div><h4>${esc(g.name)}</h4><p>${esc(L.t(g.reason))}</p><small>${g.skill?`${bi('Recipe skill','Receptskill')}: ${g.skill} · ${c.professionSkills?.[prof]>=g.skill?bi('Your skill is sufficient','Din skill räcker'):bi('Plan for later / check your skill','Planera framåt / kontrollera din skill')}`:bi('Recipe skill and equip requirements: check the recipe.','Receptskill och användningskrav: kontrollera receptet.')}</small>${sourceLine(g)}</article>`).join('')}</div>`).join(''):`<div class="info-card"><p>${bi('No documented equipment match for your current class, role and selected professions. Gathering professions, Cooking, First Aid and Fishing do not craft class armor; their material and camping guidance is shown separately.','Ingen dokumenterad utrustning matchar nuvarande klass, roll och valda professions. Samlaryrken, Cooking, First Aid och Fishing craftar inte klassrustning; material- och campinghjälpen visas separat.')}</p></div>`}</section>`;
+}
   const byId = new Map([...RAW.quests, ...RAW.misc, ...DB.abilities, ...RAW.professions, ...RAW.dungeons.flatMap(d => d.quests)].map(q => [q.id, q]));
   document.addEventListener('change', e => {
     const el = e.target,
@@ -830,6 +891,8 @@
       save();
       return;
     }
+    if(el.dataset.professionSkill){const name=el.dataset.professionSkill;if(!c.professions.includes(name))return;c.professionSkills||={};if(el.value==='')delete c.professionSkills[name];else{const n=Number(el.value);if(!Number.isInteger(n)||n<1||n>300){el.setCustomValidity?.(bi('Use a whole number from 1 to 300.','Ange ett heltal mellan 1 och 300.'));el.reportValidity?.();return;}el.setCustomValidity?.('');c.professionSkills[name]=n;}save();renderContent();return;}
+    if(el.id==='source-links-setting'){state.settings.showSourceLinks=el.checked;save();renderShell();return;}
     if (el.id === 'beginner-setting') {
       c.beginner = el.checked;
       save();
@@ -879,6 +942,7 @@
       const item = byId.get(el.dataset.step),
         key = item.id + ':' + el.dataset.index;
       if (el.checked) c.done[key] = true;else delete c.done[key];
+      const wasDone=C.questDone(item,{...c,done:{...c.done,[key]:!el.checked}});
       if (item.steps.every((_, i) => c.done[item.id + ':' + i])) c.done[item.id] = true;else delete c.done[item.id];
       save();
       const details = el.closest('details');
@@ -889,6 +953,7 @@
         const checkbox = parent?.querySelector('[data-check]');
         if (checkbox) checkbox.checked = C.questDone(item, c);
       }
+      if(wasDone!==C.questDone(item,c))renderContent();
       return;
     }
     if (el.dataset.category) {
@@ -1115,6 +1180,13 @@
       $('#offline-status').innerHTML = icon('info') + ' ' + bi('Could not activate offline caching', 'Offlinecache kunde inte aktiveras');
     });
   }
+  document.addEventListener('pointerover',e=>{const target=e.target.closest?.('[data-tooltip]');if(target&&e.pointerType!=='touch')showTalentTooltip(target);});
+  document.addEventListener('pointerout',e=>{if(e.target.closest?.('[data-tooltip]'))hideTalentTooltip();});
+  document.addEventListener('focusin',e=>{const target=e.target.closest?.('[data-tooltip]');if(target)showTalentTooltip(target);});
+  document.addEventListener('focusout',hideTalentTooltip);
+  document.addEventListener('click',hideTalentTooltip);
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')hideTalentTooltip();});
+  window.addEventListener('scroll',hideTalentTooltip,true);window.addEventListener('resize',hideTalentTooltip);
   fillIcons();
   renderShell();
   offlineStatus();

@@ -5,8 +5,8 @@
  <meta name="theme-color" content="#101714"><meta name="description" content="Your personal leveling companion in WoW Forever. Quests, talents, zones and dungeons, one step at a time.">
  <meta name="robots" content="noindex, nofollow">
  <title>Questbound · Forever guide</title>
- <link rel="icon" href="./assets/compass.svg" type="image/svg+xml"><link rel="manifest" href="./manifest.webmanifest"><link rel="stylesheet" href="./styles.css"><link rel="stylesheet" href="./themes.css"><link rel="stylesheet" href="./v03.css">
- <script defer src="./i18n.js"></script><script defer src="./locales.js"></script><script defer src="./catalog.js"></script><script defer src="./content.js"></script><script defer src="./core.js"></script><script defer src="./guide-tools.js"></script><script defer src="./zone-data.js"></script><script defer src="./controller-data.js"></script><script defer src="./character-rules.js"></script><script defer src="./game-assets.js"></script><script defer src="./app.js"></script>
+ <link rel="icon" href="./assets/compass.svg" type="image/svg+xml"><link rel="manifest" href="./manifest.webmanifest"><link rel="stylesheet" href="./styles.css"><link rel="stylesheet" href="./themes.css"><link rel="stylesheet" href="./v03.css"><link rel="stylesheet" href="./v04.css">
+ <script defer src="./i18n.js"></script><script defer src="./locales.js"></script><script defer src="./catalog.js"></script><script defer src="./content.js"></script><script defer src="./core.js"></script><script defer src="./guide-tools.js"></script><script defer src="./zone-data.js"></script><script defer src="./controller-data.js"></script><script defer src="./character-rules.js"></script><script defer src="./game-assets.js"></script><script defer src="./quest-chains.js"></script><script defer src="./release-content.js"></script><script defer src="./talent-text.js"></script><script defer src="./profession-planner.js"></script><script defer src="./app.js"></script>
 </head>
 <body>
  <a class="skip-link" href="#main" data-i18n="Hoppa till innehåll">Skip to content</a>
@@ -15,14 +15,9 @@
   <div class="sidebar-character" id="sidebar-character"></div>
   <div class="nav-caption" data-i18n="DIN ÄVENTYRSJOURNAL">YOUR ADVENTURE JOURNAL</div><nav id="navigation"></nav>
   <button class="new-character side-button" data-action="new-character"><span data-icon="plus"></span> <span data-i18n="Ny karaktär">New character</span></button>
-  <div class="sidebar-bottom"><div class="camp-mark" data-icon="tent"></div><button class="side-button" data-action="settings"><span data-icon="settings"></span> <span data-i18n="Inställningar & backup">Settings & backup</span></button><button class="version-link" data-action="about">0.3.0 · 2026-10-26</button></div>
+  <div class="sidebar-bottom"><span class="saved-state" id="save-status" role="status"><i></i> Saved on this device</span><div class="camp-mark" data-icon="tent"></div><button class="side-button" data-action="settings"><span data-icon="settings"></span> <span data-i18n="Inställningar & backup">Settings & backup</span></button><button class="version-link" data-action="about">0.4.0 · 2026-10-27</button></div>
  </aside>
  <div class="workspace">
-  <header class="topbar">
-   <button class="icon-button mobile-menu" data-action="menu" aria-label="Open menu" data-i18n-aria="Öppna menyn"><span data-icon="menu"></span></button>
-   <button class="icon-button" id="back-button" data-action="back" aria-label="Back" data-i18n-aria="Tillbaka" disabled><span data-icon="back"></span></button><div class="breadcrumb"><span data-i18n="Din resa">Your journey</span><span class="breadcrumb-divider">/</span><span id="breadcrumb-character">Loreia</span></div>
-   <div class="topbar-actions"><span class="saved-state" id="save-status" role="status"><i></i> Saved on this device</span><button class="toolbar-button" id="compact-toggle" data-action="compact" aria-pressed="false"><span data-icon="gamepad"></span><span data-i18n="Spelläge">Play mode</span></button><button class="toolbar-button preferences-link" data-action="settings" aria-label="Language, theme and settings" data-i18n-aria="Språk, tema och inställningar"><span data-icon="settings"></span><span data-i18n="Inställningar">Settings</span></button></div>
-  </header>
   <main id="main" tabindex="-1">
    <div id="page-heading"></div>
    <div class="search-row"><div class="search-wrap"><span data-icon="search"></span><input id="search" type="search" autocomplete="off" placeholder="Search for a quest, zone, ability…" data-i18n-placeholder="Sök efter en quest, zon, ability…" aria-label="Search the guide" data-i18n-aria="Sök i guiden"><kbd>/</kbd></div><button class="filter-button" data-action="filters" aria-label="Choose visible categories" data-i18n-aria="Välj synliga kategorier"><span data-icon="sliders"></span><span data-i18n="Kategorier">Categories</span><span class="filter-count" id="filter-count">7</span></button></div>
@@ -33,6 +28,7 @@
  </div>
  <div class="drawer-backdrop" id="menu-backdrop" hidden></div>
  <dialog id="dialog"><div id="dialog-content"></div></dialog>
+ <div id="talent-tooltip" class="talent-tooltip" role="tooltip" hidden></div>
  <div id="toast" class="toast" role="status" aria-live="polite"></div>
  <input type="file" id="backup-file" accept="application/json,.json" hidden>
  <noscript><p class="noscript">The guide's profiles and checklists need JavaScript. Enable JavaScript in your browser and reload.</p></noscript>

@@ -186,7 +186,8 @@
     }];
     for (const z of data.zones) {
       z.places = places[z.id] || [];
-      z.dungeonIds = data.dungeons.filter(d => dungeonZones[d.id] === z.id).map(d => d.id);
+      z.dungeonIds = data.dungeons.filter(d => dungeonZones[d.id] === z.id || (d.zoneIds || []).includes(z.id)).map(d => d.id);
+      z.places = [...new Set([...z.places,...data.dungeons.filter(d=>z.dungeonIds.includes(d.id)).map(d=>d.title)])];
       if (beginnerDescriptions[z.id]) z.beginnerDesc = beginnerDescriptions[z.id];
       z.localSteps = z.id === 'zone-barrens' ? barrensSteps : [{
         en: 'Compare your quest log with the zone map. Group nearby objectives before setting out.',

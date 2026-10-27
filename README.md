@@ -1,39 +1,51 @@
 # Questbound
 
-Questbound is a mobile-friendly leveling companion for World of Warcraft: Forever. Track your character, plan talent choices, prepare for dungeons, and find guidance for your current zone.
+Questbound is a personal leveling companion for World of Warcraft: Forever. Track characters, plan talents, prepare dungeon quests, and find guidance for the zone you are in.
 
 ## Characters and progress
 
-Start with an empty profile and create your own character. Each profile keeps its level, quest checkmarks, notes, builds, professions, current zone, and assistance preferences. Race options match the selected class and faction, including Forever's new combinations. Role selection appears only for classes with multiple roles. Primary and secondary professions are shown separately, with up to two primary professions and any secondary professions.
+Start with an empty profile and create your own characters. Each profile keeps its level, completed quests, notes, builds, professions, profession skills, current zone, and assistance preferences. Race choices match the selected class and faction. Roles appear only when a class supports more than one. Choose up to two primary professions and all three secondary professions.
 
 ## Overview and zone guidance
 
-Overview shows your current character, current and next talent choices, class milestones, and tasks. Choose a zone, town, or subzone to see local guidance on the same page. For example, Crossroads and Ratchet select The Barrens. Zone guidance includes documented preparation tips and linked dungeon quests where available.
+Overview shows the character, current and next talent choices, class milestones, and tasks. Select a zone, town, or subzone to see local tips and reward quests on the same page. Crossroads and Ratchet, for example, both select The Barrens.
 
-Filter tasks by current, upcoming, or all levels. All levels are shown in ascending order. Completed tasks remain visible when Show completed is enabled, including after your character levels up.
+Tasks are sorted by ascending level in every view. Filter by current, upcoming, or all levels; completed tasks remain available when Show completed is enabled. Follow-up quests unlock after their documented prerequisites are checked off. Available quests preview noteworthy rewards later in the chain.
 
 ## Talents and builds
 
-Import builds from Wowhead's Forever calculator. Links with a saved point order provide a leveling plan; allocation-only links show the final distribution. Keep multiple named builds, switch between them, rename them, or delete them.
+Import builds from Wowhead's Forever calculator. A link with a saved point order provides a level-by-level plan; an allocation-only link preserves the final distribution. Switch between named builds, rename them, or delete them.
 
-Visual talent trees use in-game icons and actual row and column positions. Current and next point choices are highlighted. Select a talent to see its position, prerequisites, and Wowhead reference. Talent names and English game terms remain consistent with the game client.
+Compact talent trees use game backgrounds, icons, real row and column positions, rank counters, and prerequisite arrows. Current and next talent points are highlighted. Hover or focus a talent for rank effects, or tap it to open details. Game names and effect text remain in English.
 
-## Quests, dungeons, and reference
+## Quests and dungeons
 
-Explore selected class quests, dungeon level ranges, prerequisites, quest givers, and locations. Browse ability training, professions and camping, gear-guide links, and a beginner glossary. Search across guide categories, including hidden categories and all levels.
+Browse selected class and reward questlines across 48 mapped zones. Rewards include weapons, armor, bags, utility items, collectibles, unlocks, and quest money. Cozy Sleeping Bag is recommended from level 20; its minimum start level of 14 is listed separately.
 
-The controller reference includes searchable functions, menu navigation, shortcuts, targeting, action bars, and class functions with Xbox, PlayStation, or generic button labels. It is based on a pinned revision of the Forever client UI source. Follow the game's own prompts when controls differ.
+The dungeon list contains 36 entries through level 60, including separate Scarlet Monastery, Maraudon, Blackrock Spire, and Dire Maul wings. Recommended ranges and technical entry requirements are shown separately. Some quests and later-level details remain preliminary.
 
-## Appearance and assistance
+## Professions and materials
 
-English is the default language; Swedish is also available. Settings includes language, five color themes, four assistance levels, and beginner mode. Dark / OLED uses a black main background. Assistance controls the amount of detail; beginner mode adds basic reminders and explanations. Compact play mode reduces spacing.
+Enter a separate base skill level for every selected profession. Cooking and First Aid material plans show estimated amounts for the current stage and future stages, counting only remaining profession leveling. The selected routes use fish recipes and cloth bandages. Extra food, healing supplies, camping crafts, crafted equipment, and existing inventory are not included in these quantities.
+
+Current Forever guides document quantities through skill 225. Planning from 225–300 is visibly labeled as a preliminary Classic fallback. Partial-stage amounts are estimates because skill-up chances vary. Training and unlock materials are displayed separately.
+
+Fishing itself consumes no crafting materials for skill points. Its guide distinguishes fishing locations, tools, Cooking fish, and quest-only fish needed to unlock Artisan training.
+
+Crafted equipment suggestions match class, role, active build, and selected professions. The documented selection covers current level-30 class guides for all nine classes; it is not a complete endgame ranking. Unconfirmed recipe requirements are left for the player to check rather than guessed.
+
+## Reference and settings
+
+Search quests, zones, abilities, talents, and controller functions. The controller reference includes Xbox, PlayStation, and generic button names and is based on a pinned revision of the Forever client UI source. Follow the game's prompts when controls differ.
+
+English is the default language; Swedish is available in Settings. Choose from five themes, including a black OLED theme, and adjust assistance and beginner explanations separately. Settings lives in the side menu. The compact interface is shared by all players; there is no separate Play Mode.
+
+Source links are optional and off by default. They can be enabled in Settings; the full provenance remains available from Sources & content status.
 
 ## Saving and offline use
 
-Profiles are saved in your browser. Export and import JSON backups to move them between devices or browsers. Your profile data is not sent to a backend. Once loaded online, the guide and its bundled icons can be used offline. External references require an internet connection.
+Profiles are saved in the browser. Export and import JSON backups to move them between devices or browsers. Profile data is not sent to a backend. After loading online, the guide, bundled icons, talent backgrounds, and effect descriptions are available offline. External references require an internet connection.
 
-## Content coverage
+Questbound contains a documented selection, not a complete quest database or leveling route. Detailed provenance and coverage limits are recorded in [SOURCES.md](SOURCES.md).
 
-Quest and dungeon content is a documented selection, not a complete leveling route. Some starting locations, racial quest variants, later-level content, and rewards still need verification. Ability lists show first training levels, not every rank or cost. Source links and content status are included in the guide; detailed provenance is recorded in [SOURCES.md](SOURCES.md).
-
-Questbound is an unofficial companion. World of Warcraft, game names, and game icons belong to Blizzard Entertainment.
+Questbound is an unofficial companion. World of Warcraft, game names, artwork, and in-game descriptions belong to Blizzard Entertainment.

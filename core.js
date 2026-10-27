@@ -22,6 +22,7 @@
       role: clean(values.role || 'DPS', 20),
       spec: clean(values.spec || '', 40),
       demo: !!values.demo,
+      professionSkills: normaliseProfessionSkills(values.professionSkills),
       professions: Array.isArray(values.professions) ? values.professions.slice(0, 5) : [],
       done: {},
       notes: '',
@@ -40,6 +41,7 @@
       compact: false
     };
   }
+  function normaliseProfessionSkills(values){const names=['Alchemy','Blacksmithing','Enchanting','Engineering','Herbalism','Leatherworking','Mining','Skinning','Tailoring','Cooking','First Aid','Fishing'];return Object.fromEntries(Object.entries(values&&typeof values==='object'?values:{}).filter(([name,value])=>names.includes(name)&&Number.isInteger(value)&&value>=1&&value<=300));}
   function createBlankCharacter() {
     return {
       ...createCharacter(),
@@ -76,6 +78,7 @@
       schema: 1,
       settings: {
         language: raw.settings?.language === 'sv' ? 'sv' : 'en',
+        showSourceLinks: raw.settings?.showSourceLinks === true,
         theme: ['forest', 'dark', 'light', 'frost', 'parchment'].includes(raw.settings?.theme) ? raw.settings.theme : 'forest'
       },
       characters,
