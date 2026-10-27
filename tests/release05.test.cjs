@@ -76,7 +76,8 @@ test('adjacent-zone navigation uses directly linked neighboring land maps',()=>{
  assert(!nearby.includes('zone-elwynn'));
  assert.equal(nearby.length,new Set(nearby).size);
  assert.deepEqual(A.adjacentZones(maps,'world',require('../travel-data.js')),[]);
- assert(A.render({data:window.WORLD_MAP_DATA,initial:'zone-barrens'}).includes('atlas-neighbors'));
+ assert(!A.render({data:window.WORLD_MAP_DATA,initial:'zone-barrens'}).includes('atlas-neighbors'));
+ assert(!A.render({data:window.WORLD_MAP_DATA,initial:'zone-barrens'}).includes('Adjacent zones</strong>'));
 });
 test('mobile pinch zoom never auto-opens a zone and gestures cannot trigger a tap',()=>{
  const source=fs.readFileSync(path.join(__dirname,'../world-map.js'),'utf8');
@@ -99,4 +100,36 @@ test('adjacent sibling navigation preserves the saved parent zoom',()=>{
 test('adjacent zone buttons are not disabled by a prior pinch gesture',()=>{
  const code=fs.readFileSync(path.join(__dirname,'../world-map.js'),'utf8');
  assert(code.includes('!vp.contains(button)||!suppressClick'));
+});
+
+test('continent regions avoid dead zones and correctly hit western Winterspring',()=>{
+ assert.equal(A.zoneAt(maps,'kalimdor',.544,.248)?.id,'zone-winterspring');
+ assert.equal(A.zoneAt(maps,'kalimdor',.597,.253)?.id,'zone-winterspring');
+ assert.equal(A.zoneAt(maps,'kalimdor',.44,.414)?.id,'zone-stonetalon');
+ assert.equal(A.zoneAt(maps,'kalimdor',.474,.58)?.id,'zone-mulgore');
+ assert.equal(A.zoneAt(maps,'kalimdor',.503,.56)?.id,'zone-barrens');
+ assert(A.zoneAt(maps,'eastern',.49,.44));
+ assert(A.zoneAt(maps,'kalimdor',.43,.74));
+ assert.equal(A.zoneAt(maps,'kalimdor',.9,.7),null);
+ assert.equal(A.zoneAt(maps,'eastern',.1,.5),null);
+});
+test('clicking neighboring regions on The Barrens map opens the expected zone',()=>{
+ const cases=[
+  [.22,.18,'zone-stonetalon'],
+  [.25,.47,'zone-mulgore'],
+  [.19,.92,'zone-thousand-needles'],
+  [.7,.27,'zone-durotar']
+ ];
+ for(const [x,y,expected] of cases){
+  assert.equal(A.zoneAt(maps,'zone-barrens',x,y)?.id,expected);
+  assert.equal(A.neighboringZoneAt(maps,'zone-barrens',x,y,require('../travel-data.js'))?.id,expected);
+ }
+ assert.equal(A.neighboringZoneAt(maps,'zone-barrens',.54,.55,require('../travel-data.js')),null);
+});
+test('adjacent-zone panel is removed, while the in-map navigation stays available',()=>{
+ const html=A.render({data:window.WORLD_MAP_DATA,initial:'zone-barrens'});
+ assert(!html.includes('class="atlas-neighbors"'));
+ const code=fs.readFileSync(path.join(__dirname,'../world-map.js'),'utf8');
+ assert(code.includes('neighboringZoneAt(maps,map.id,u,v'));
+ assert(code.includes('autoOpen&&!map.zoneId'));
 });
