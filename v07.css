@@ -38,3 +38,8 @@
 .sidebar-character .character-copy{min-width:0}
 .sidebar-character .character-copy strong{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;word-break:normal;line-height:1.35;text-wrap:pretty}
 .sidebar-character .character-copy small{overflow-wrap:anywhere}
+
+/* Give wrapped names breathing room above character details and the sidebar navigation. */
+.sidebar-character .character-copy small{margin-top:8px;line-height:1.5}
+.sidebar-character{margin-bottom:36px}
+@media(max-width:960px){.sidebar-character{margin-bottom:30px}}
