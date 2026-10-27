@@ -2,6 +2,14 @@
 
 This changelog tracks changes published to the GitHub repository. It is not displayed on the website.
 
+## 0.7.6 – 2026-10-27
+- **Continent maps:** Replaced small marker-radius limits with contiguous land-area hit testing on Kalimdor and Eastern Kingdoms. Land clicks no longer fail solely because the pointer is too far from a zone marker. Approximate coastal masks keep clicks far out at sea inactive. (`world-map.js`)
+- **Zone boundaries:** Added hand-shaped region contours for western Winterspring, The Barrens, Mulgore, and Stonetalon Mountains on Kalimdor, as well as the visible neighboring areas on The Barrens zone map. These are approximate hit areas, not pixel-perfect game boundaries. (`world-map.js`)
+- **In-map navigation:** Clicking a visible neighboring area on The Barrens map opens that zone directly; other zone maps also support directional navigation near their edges when a land connection is known. Pinching on mobile continues to zoom without opening a zone. (`world-map.js`)
+- **Interface:** Removed the **Adjacent zones** button panel below zone maps as requested. (`world-map.js`, `v07.css`)
+- **Regression tests:** Added coverage for western Winterspring, neighboring-area clicks, ocean clicks, and the removed panel. (`tests/release05.test.cjs`)
+- Bumped version and offline cache. (`app.js`, `index.html`, `sw.js`)
+
 ## 0.7.5 – 2026-10-27
 - **World Map:** Improved zone selection around The Barrens and Mulgore. Desktop zoom now uses smaller, region-aware hit areas instead of picking whichever zone center happens to be closest; users can also click or tap a zone directly. (`world-map.js`)
 - **Mobile:** Pinching changes map magnification without automatically opening a zone. Tapping a zone marker or supported zone area opens the map; panning and pinching do not count as taps. (`world-map.js`)
