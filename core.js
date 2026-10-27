@@ -36,6 +36,7 @@
       beginner: true,
       helpLevel: clamp(values.helpLevel ?? 2, 1, 4),
       journey: normaliseJourney(values.journey),
+      companion: normaliseCompanion(values.companion),
       atlasMap: clean(values.atlasMap || 'world', 100),
       currentZone: clean(values.currentZone || '', 100),
       currentPlace: clean(values.currentPlace || '', 100),
@@ -43,7 +44,22 @@
       compact: false
     };
   }
-  function normaliseJourney(v={}){v=v&&typeof v==='object'?v:{};return {from:clean(v.from||'',100),to:clean(v.to||'',100),faction:['Horde','Alliance'].includes(v.faction)?v.faction:'',transport:v.transport!==false,avoidEnemy:v.avoidEnemy!==false,planned:v.planned===true};}
+  function normaliseJourney(v={}){v=v&&typeof v==='object'?v:{};return {from:clean(v.from||'',100),to:clean(v.to||'',100),faction:['Horde','Alliance'].includes(v.faction)?v.faction:'',transport:v.transport!==false,avoidEnemy:v.avoidEnemy!==false,flightMode:v.flightMode==='known'?'known':'all',planned:v.planned===true};}
+  function normaliseCompanion(v={}){
+    v=v&&typeof v==='object'&&!Array.isArray(v)?v:{};
+    const safeKey=k=>typeof k==='string'&&k.length>0&&k.length<=180&&!['__proto__','constructor','prototype'].includes(k);
+    const strings=(a,n)=>Array.isArray(a)?[...new Set(a.filter(safeKey))].slice(0,n):[];
+    const trip=r=>({from:clean(r?.from||'',100),to:clean(r?.to||'',100),faction:['Alliance','Horde'].includes(r?.faction)?r.faction:'',transport:r?.transport!==false,avoidEnemy:r?.avoidEnemy!==false,flightMode:r?.flightMode==='known'?'known':'all'});
+    return {
+      inventory:Object.fromEntries(Object.entries(v.inventory&&typeof v.inventory==='object'?v.inventory:{}).filter(([k,n])=>safeKey(k)&&Number.isInteger(n)&&n>=0&&n<=1000000).slice(0,500)),
+      flightPoints:strings(v.flightPoints,200),
+      goals:Array.isArray(v.goals)?v.goals.filter(g=>g&&['quest','dungeon','craft'].includes(g.kind)&&safeKey(g.id)).slice(0,50).map(g=>({kind:g.kind,id:g.id,completed:g.completed===true})):[],
+      favorites:strings(v.favorites,60),history:Array.isArray(v.history)?v.history.slice(0,15).map(trip).filter(r=>r.from&&r.to&&r.faction):[],
+      town:clean(v.town||'',100),
+      turnIns:Array.isArray(v.turnIns)?v.turnIns.filter(r=>r&&safeKey(r.id)&&safeKey(r.town)).slice(0,100).map(r=>({id:r.id,town:clean(r.town,100),ready:r.ready===true})):[],
+      trainingDone:strings(v.trainingDone,200)
+    };
+  }
   function normaliseProfessionSkills(values){const names=['Alchemy','Blacksmithing','Enchanting','Engineering','Herbalism','Leatherworking','Mining','Skinning','Tailoring','Cooking','First Aid','Fishing'];return Object.fromEntries(Object.entries(values&&typeof values==='object'?values:{}).filter(([name,value])=>names.includes(name)&&Number.isInteger(value)&&value>=1&&value<=300));}
   function createBlankCharacter() {
     return {
@@ -67,6 +83,7 @@
       out.done = Object.fromEntries(Object.entries(c.done || {}).filter(([k, v]) => /^[a-zA-Z0-9_:.-]{1,180}$/.test(k) && v === true));
       out.notes = clean(c.notes, 20000);
       out.journey=normaliseJourney(c.journey);out.atlasMap=clean(c.atlasMap||'world',100);
+      out.companion=normaliseCompanion(c.companion);
       out.beginner = c.beginner !== false;
       out.compact = !!c.compact;
       out.filters = {
@@ -74,6 +91,7 @@
         view: ['now', 'soon', 'all'].includes(c.filters?.view) ? c.filters.view : 'now',
         showDone: !!c.filters?.showDone
       };
+      if(['solo','group'].includes(c.filters?.activity))out.filters.activity=c.filters.activity;
       out.builds = Array.isArray(c.builds) ? c.builds.slice(0, 30).map(b => normaliseBuild(b, catalog, out.classId)) : [];
       out.activeBuild = out.builds.some(b => b.id === c.activeBuild) ? c.activeBuild : out.builds[0]?.id || null;
       return out;
@@ -273,6 +291,7 @@
     clean,
     createCharacter,
     createBlankCharacter,
+    normaliseCompanion,
     normalise,
     normaliseBuild,
     parseWowhead,
