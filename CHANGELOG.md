@@ -2,6 +2,11 @@
 
 This changelog tracks changes published to the GitHub repository. It is not displayed on the website.
 
+## 0.7.9 – 2026-10-28
+- **Public guides:** Controller Support and Beginner Guide can now be opened without creating a character, just like World Map. Other character-specific screens still show character setup. The page heading reflects the selected public guide. (`app.js`)
+- **Welcome screen:** Added direct links to World Map, Beginner Guide, and Controller Support for users without a character. (`app.js`)
+- Added regression checks for no-character navigation, updated README and bumped the offline cache and version labels. (`tests/public-pages.test.cjs`, `README.md`, `app.js`, `index.html`, `sw.js`)
+
 ## 0.7.8 – 2026-10-27
 - **Zone-map navigation:** Fixed direct clicks from Mulgore into The Barrens. Neighboring zones now use a less restrictive, bearing-based edge hit area where a precise map polygon is unavailable. Existing traced regions continue to take priority. (`world-map.js`)
 - **Navigation coverage:** Verified that all 94 documented, same-continent walk connections between the 48 zone maps can be selected in both directions where recorded. Added systematic regression checks and specific cases for Mulgore, The Barrens, Ashenvale, and Dustwallow Marsh. (`tests/release05.test.cjs`)

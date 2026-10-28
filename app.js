@@ -85,6 +85,7 @@
   const utilityIcon = n => L.h`<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">${paths[n] || paths.compass}</svg>`;
   const icon=n=>window.GAME_ASSETS.categories?.[n]?gameIcon(window.GAME_ASSETS.categories[n]):utilityIcon(n);
   const nav = [['overview', 'Översikt', 'compass'], ['talents', 'Talents & builds', 'zap'], ['quests', 'Quests', 'scroll'], ['dungeons', 'Dungeons', 'dungeon'], ['zones', 'Levelingzoner', 'map'], ['world-map', {en:'World map',sv:'Världskarta'}, 'map'], ['zone-guide', 'Min zon', 'pin'], ['abilities', 'Abilities & träning', 'sparkles'], ['gear', 'Utrustning', 'shield'], ['professions', 'Professions', 'pickaxe'], ['notes', 'Mina anteckningar', 'note'], ['glossary', 'Nybörjarguiden', 'book'], ['controller', 'Handkontroll', 'gamepad']];
+  const characterOptionalPages = new Set(['world-map', 'glossary', 'controller']);
   const categoryNames = {
     quests: 'Quests',
     dungeons: 'Dungeons',
@@ -326,7 +327,7 @@
   }
   function heading() {
  const c=character(),n=nav.find(n=>n[0]===page)||nav[0];
- $('#page-heading').innerHTML=`<div class="heading-row"><button class="icon-button mobile-menu" data-action="menu" aria-label="${bi('Open menu','Öppna menyn')}">${utilityIcon('menu')}</button><button class="icon-button" id="back-button" data-action="back" aria-label="${bi('Back','Tillbaka')}" ${navTrail.length?'':'disabled'}>${utilityIcon('back')}</button><h1>${c.blank&&page!=='world-map'?bi('Create your character','Skapa din karaktär'):esc(L.t(n[1]))}</h1><button class="draft-badge" data-action="about">0.7.8</button></div>`;
+ $('#page-heading').innerHTML=`<div class="heading-row"><button class="icon-button mobile-menu" data-action="menu" aria-label="${bi('Open menu','Öppna menyn')}">${utilityIcon('menu')}</button><button class="icon-button" id="back-button" data-action="back" aria-label="${bi('Back','Tillbaka')}" ${navTrail.length?'':'disabled'}>${utilityIcon('back')}</button><h1>${c.blank&&!characterOptionalPages.has(page)?bi('Create your character','Skapa din karaktär'):esc(L.t(n[1]))}</h1><button class="draft-badge" data-action="about">0.7.9</button></div>`;
 }
   function renderShell() {
     applyPreferences();
@@ -449,7 +450,7 @@
   }
   function renderContent() {
     const c = character();
-    if (c.blank && page!=='world-map') {
+    if (c.blank && !characterOptionalPages.has(page)) {
       $('#content').innerHTML = welcome();
       return;
     }
@@ -841,7 +842,7 @@
     return src ? `<img class="game-icon ${extra}" src="${src}" alt="${esc(alt)}" width="36" height="36">` : utilityIcon('sparkles');
   }
   function welcome() {
-    return `<section class="empty-state setup-card">${icon('plus')}<h2>${bi('No character configured', 'Ingen karaktär skapad')}</h2><button class="primary-button" data-action="edit-character">${bi('Create character', 'Skapa karaktär')}</button></section>`;
+    return `<section class="empty-state setup-card">${icon('plus')}<h2>${bi('No character configured', 'Ingen karaktär skapad')}</h2><p>${bi('You can explore the World Map, Beginner Guide and Controller Support without creating a character.', 'Du kan utforska Världskartan, Nybörjarguiden och Handkontroll utan att skapa en karaktär.')}</p><button class="primary-button" data-action="edit-character">${bi('Create character', 'Skapa karaktär')}</button><div class="character-actions"><button class="secondary-button" data-page="world-map">${bi('World Map', 'Världskarta')}</button><button class="secondary-button" data-page="glossary">${bi('Beginner Guide', 'Nybörjarguiden')}</button><button class="secondary-button" data-page="controller">${bi('Controller Support', 'Handkontroll')}</button></div></section>`;
   }
   function positionLabel(s) {
     return `${esc(s.treeName)} · ${bi('Row', 'Rad')} ${s.row + 1} · ${bi('Column', 'Kolumn')} ${s.col + 1}`;

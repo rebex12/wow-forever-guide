@@ -8,7 +8,7 @@ New installations use Dark / OLED by default, without changing existing saved th
 
 ## Characters and progress
 
-Start with an empty profile and create your own characters. Each profile keeps its level, completed quests, notes, builds, professions, profession skills, current zone, and assistance preferences. Race choices match the selected class and faction. Roles appear only when a class supports more than one. Choose up to two primary professions and all three secondary professions.
+Start with an empty profile and create your own characters. You can open the World Map, Beginner Guide, and Controller Support without creating a character; these are available in the sidebar and on the welcome screen. Each profile keeps its level, completed quests, notes, builds, professions, profession skills, current zone, and assistance preferences. Race choices match the selected class and faction. Roles appear only when a class supports more than one. Choose up to two primary professions and all three secondary professions.
 
 ## Overview and zone guidance
 
