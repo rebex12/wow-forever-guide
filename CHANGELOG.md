@@ -2,6 +2,15 @@
 
 This changelog tracks changes published to the GitHub repository. It is not displayed on the website.
 
+## 0.7.10 – 2026-10-29
+- Added all seven starter gathering-book quests, profession-aware manual advice, the two-stage Coldridge mail delivery and The Damned prerequisite for Marla’s Last Wish.
+- Added the complete eight-stage Brother Paxton chain, including bag and weapon previews before later stages unlock. Starter recommendations follow race, current zone and chains already started.
+- Added free six-slot bag activities for all starter races, including the existing Skyborne quest. Bag rewards have a visible slot-count badge and sort first among tasks at the same level.
+- Added separate Alliance and Horde Shaman weapon chains after Call of Air, including the Horde-only Eyes on the Sky handoff, all three weapon choices and faction-specific extra rewards. Later stages show recommended levels above their minimum of 30 and explain the difficult group fights.
+- Completed Dalaran key preparation, corrected parallel starting quests, and added Black Tome → Tome of Dalaran → Lyn the Ignored. Shared dungeon entries use the same progress IDs as the main quest list. The key is supplied for the dungeon run; the recommended 28–33 range is kept separate from unconfirmed entry requirements.
+- Added official Experience Preset and Ruleset/faction advice, the controller beta notice, and current Tauren/Skyborne racial reminders. New beta-derived activities have a visible label in both languages.
+- Updated source notes, release labels and offline cache. Added data, prerequisite, faction/race and rendering checks; aligned older tests with the already-published beginner/theme defaults and sibling-map navigation.
+
 ## 0.7.9 – 2026-10-28
 - **Public guides:** Controller Support and Beginner Guide can now be opened without creating a character, just like World Map. Other character-specific screens still show character setup. The page heading reflects the selected public guide. (`app.js`)
 - **Welcome screen:** Added direct links to World Map, Beginner Guide, and Controller Support for users without a character. (`app.js`)

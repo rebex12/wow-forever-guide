@@ -60,7 +60,7 @@ test('zoom navigation restores the previous zoom and pan for each parent map',()
  assert.deepEqual(backToWorld.restore,{id:'world',...worldView});
  assert.equal(backToWorld.history.length,0);
  assert.equal(W.mapNavigation(maps,maps.zone,'continent',{z:1,px:0,py:0},[]).restore,null);
- assert.equal(W.mapNavigation(maps,maps.zone,'other',{z:1,px:0,py:0},toZone.history).history.length,0);
+ assert.equal(W.mapNavigation(maps,maps.zone,'other',{z:1,px:0,py:0},toZone.history).history.length,2);
 });
 
 test('zone hit testing distinguishes The Barrens from Mulgore',()=>{
@@ -82,7 +82,7 @@ test('adjacent-zone navigation uses directly linked neighboring land maps',()=>{
 test('mobile pinch zoom never auto-opens a zone and gestures cannot trigger a tap',()=>{
  const source=fs.readFileSync(path.join(__dirname,'../world-map.js'),'utf8');
  assert(source.includes('function zoom(factor,x=vw/2,y=vh/2,autoOpen=false)'));
- assert(source.includes('const candidate=autoOpen?zoneAt'));
+ assert(source.includes('const candidate=autoOpen&&!map.zoneId?zoneAt'));
  assert(source.includes('suppressClick=true;zoom(distance/gesture.distance'));
  assert(source.includes('if(!points.size)suppressClick=false'));
 });

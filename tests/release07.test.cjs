@@ -1,7 +1,7 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs'),path=require('node:path');
 const C=require('../core.js'),P=require('../profession-planner.js'),A=require('../companion.js'),R=require('../travel-planner.js'),X=require('../travel-extra.js'),V=require('../release07.js'),Q=require('../quest-chains.js'),T=require('../guide-tools.js');
 const D=X.apply(structuredClone(require('../travel-data.js')));
-function guide(){const window={};for(const f of ['catalog.js','content.js','release-content.js'])vm.runInNewContext(fs.readFileSync(path.join(__dirname,'..',f),'utf8'),{window});window.RELEASE_CONTENT.apply(window.GUIDE_CONTENT);V.apply(window.GUIDE_CONTENT);return window;}
+function guide(){const window={};for(const f of ['catalog.js','content.js','release-content.js'])vm.runInNewContext(fs.readFileSync(path.join(__dirname,'..',f),'utf8'),{window});window.RELEASE_CONTENT.apply(window.GUIDE_CONTENT);V.apply(window.GUIDE_CONTENT);require('../discoveries.js').apply(window.GUIDE_CONTENT);return window;}
 const route=(a,b,options={})=>R.plan(D,a,b,{faction:'Horde',...options});
 test('0.7 data has all documented flight points, real connections and valid entrance anchors',()=>{
  assert.equal(D.flightPoints.length,65);assert.equal(D.edges.filter(e=>e.kind==='flight').length,286);assert.equal(D.entrances.length,45);

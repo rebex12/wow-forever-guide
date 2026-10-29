@@ -6,7 +6,7 @@ const vm=require('node:vm');
 const C=require('../core.js');
 const T=require('../guide-tools.js');
 const file=name=>fs.readFileSync(path.join(__dirname,'..',name),'utf8');
-function data(){const window={};for(const f of ['catalog.js','content.js','zone-data.js','controller-data.js','release-content.js','release07.js'])vm.runInNewContext(file(f),{window});window.RELEASE_CONTENT.apply(window.GUIDE_CONTENT);window.RELEASE07.apply(window.GUIDE_CONTENT);Object.assign(T.dungeonZones,window.RELEASE_CONTENT.dungeonZones);T.augment(window.GUIDE_CONTENT,window.GUIDE_EXTRA_ZONES);return window;}
+function data(){const window={};for(const f of ['catalog.js','content.js','zone-data.js','controller-data.js','release-content.js','release07.js','discoveries.js'])vm.runInNewContext(file(f),{window});window.RELEASE_CONTENT.apply(window.GUIDE_CONTENT);window.RELEASE07.apply(window.GUIDE_CONTENT);window.Discoveries.apply(window.GUIDE_CONTENT);Object.assign(T.dungeonZones,window.RELEASE_CONTENT.dungeonZones);T.augment(window.GUIDE_CONTENT,window.GUIDE_EXTRA_ZONES);return window;}
 function language(){const L=require('../i18n.js');vm.runInNewContext(file('locales.js'),{window:{GuideI18n:L}});L.setLanguage('en');return L;}
 
 test('old saves gain English defaults without losing progress, builds, notes or display choices',()=>{
@@ -14,7 +14,7 @@ test('old saves gain English defaults without losing progress, builds, notes or 
   delete old.helpLevel;delete old.currentZone;delete old.currentPlace;delete old.controller;
   old.notes='Spara och Visa · <script>alert(1)</script>';old.beginner=false;old.compact=true;old.done={'shaman-water:0':true};old.filters.categories=['quests'];
   const next=C.normalise({schema:1,characters:[old],activeId:old.id},w.FOREVER_CATALOG);
-  assert.equal(next.settings.language,'en');assert.equal(next.settings.theme,'forest');
+  assert.equal(next.settings.language,'en');assert.equal(next.settings.theme,'dark');
   assert.equal(next.characters[0].notes,old.notes);assert.deepEqual(next.characters[0].done,old.done);assert.deepEqual(next.characters[0].filters,old.filters);
   assert.equal(next.characters[0].name,old.name);assert.equal(next.characters[0].beginner,false);assert.equal(next.characters[0].compact,true);assert.equal(next.characters[0].helpLevel,2);
 });
@@ -62,7 +62,7 @@ function app(){
   const element=s=>{if(!elements.has(s))elements.set(s,{innerHTML:'',textContent:'',value:'',hidden:false,dataset:{},style:{},getBoundingClientRect:()=>({width:300,height:240,left:8,right:308,top:8,bottom:248}),classList:{toggle(){},add(){},remove(){}},setAttribute(){},removeAttribute(){},addEventListener(){},focus(){},close(){this.open=false},showModal(){this.open=true}});return elements.get(s);};
   const document={querySelector:element,querySelectorAll:()=>[],addEventListener:(n,f)=>{events[n]=f;(listeners[n]||=[]).push(f);},documentElement:{dataset:{}},body:{classList:{toggle(){}}}};
   const window={addEventListener(){},scrollTo(){},isSecureContext:false,innerWidth:390,innerHeight:800,scrollY:0};const storage=new Map();const context={window,document,location:{hash:'',protocol:'http:'},history:{replaceState(){},pushState(){}},navigator:{onLine:true},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},getComputedStyle:()=>({getPropertyValue:()=> '#000'}),URL,console,setTimeout:(fn,ms)=>{const id=++timerId;timers.set(id,{fn,ms});return id;},clearTimeout:id=>timers.delete(id)};
-  vm.createContext(context);for(const f of ['i18n.js','locales.js','catalog.js','content.js','core.js','guide-tools.js','zone-data.js','controller-data.js','character-rules.js','game-assets.js','quest-chains.js','release-content.js','talent-text.js','profession-planner.js','talent-editor.js','map-data.js','travel-data.js','travel-planner.js','world-map.js','travel-extra.js','release07.js','companion.js'])vm.runInContext(file(f),context);
+  vm.createContext(context);for(const f of ['i18n.js','locales.js','catalog.js','content.js','core.js','guide-tools.js','zone-data.js','controller-data.js','character-rules.js','game-assets.js','quest-chains.js','release-content.js','talent-text.js','profession-planner.js','talent-editor.js','map-data.js','travel-data.js','travel-planner.js','world-map.js','travel-extra.js','release07.js','discoveries.js','companion.js'])vm.runInContext(file(f),context);
   vm.runInContext(file('app.js').replace('  fillIcons();', '  window.testAPI={state,character,go,settings,renderShell,renderContent,searchPage,questCard,zoneCard,overview,controllerPage,actionableItems,summary,builtIn,talents,goBack,sourceLine,dungeonCard,zoneGuide,talentInfo,showTalentTooltip,hideTalentTooltip,professionsPage,professionMaterials,professionGear,craftTasks,craftTaskCard,worldMapPage,releaseAction,talentAvailability};\n  fillIcons();'),context);
   return {api:window.testAPI,element,document,events,storage,listeners,timers};
 }
@@ -75,7 +75,7 @@ test('detailed assistance expands quest steps and highest assistance survives co
   const html=a.api.overview();assert(!html.includes('Matched place'));assert(!html.includes('session-help-level'));a.api.settings();assert.match(a.element('#dialog-content').innerHTML,/settings-help-level/);
 });
 test('Overview places the checklist immediately after the level selector',()=>{
- const a=app(),c=a.api.character();Object.assign(c,C.createCharacter({level:20}));c.blank=false;
+ const a=app(),c=a.api.character();Object.assign(c,C.createCharacter({level:20}));c.blank=false;c.beginner=true;
  const html=a.api.overview(),level=html.indexOf('id="character-level"'),checklist=html.indexOf('class="overview-checklist"');
  assert(level>=0&&checklist>level);assert(checklist<html.indexOf('session-panel'));assert(checklist<html.indexOf('summary-grid'));
  assert.match(html,/data-skip="first-town"/);assert.match(html,/Skipped \(0\)/);
@@ -93,7 +93,7 @@ test('Skipped lists every saved skip despite level, help, profession, category a
  assert(!a.api.actionableItems().some(q=>c.skipped[q.id]));
 });
 test('real task actions skip, restore and complete without conflating saved statuses',async()=>{
- const a=app(),c=a.api.character();Object.assign(c,C.createCharacter({level:20}));c.blank=false;
+ const a=app(),c=a.api.character();Object.assign(c,C.createCharacter({level:20}));c.blank=false;c.beginner=true;
  const button={dataset:{skip:'first-town'},closest:()=>null};
  await a.listeners.click[0]({target:{closest:()=>button}});
  assert.equal(c.skipped['first-town'],true);assert.equal(c.done['first-town'],undefined);
@@ -135,7 +135,7 @@ test('Forever class, faction and role choices exclude invalid combinations',()=>
  const c={classId:'shaman',faction:'Horde',race:'Skyborne',role:'Healer',professions:['Skinning','Leatherworking',...R.secondary]};assert(R.valid(c));assert(!R.valid({...c,professions:[...c.professions,'Mining']}));
 });
 test('All tasks stay in ascending level order and completed level-one tasks survive leveling',()=>{
- const a=app(),c=a.api.character();Object.assign(c,C.createCharacter({name:'Test',level:1}));c.blank=false;c.filters.view='all';c.filters.showDone=true;c.done['first-town']=true;c.done['flight-paths']=true;
+ const a=app(),c=a.api.character();Object.assign(c,C.createCharacter({name:'Test',level:1}));c.blank=false;c.beginner=true;c.filters.view='all';c.filters.showDone=true;c.done['first-town']=true;c.done['flight-paths']=true;
  const before=a.api.actionableItems().map(q=>q.id);assert(before.includes('first-town'));c.level=2;
  const tasks=a.api.actionableItems();assert(tasks.some(q=>q.id==='first-town'));assert(tasks.some(q=>q.id==='flight-paths'));assert(tasks.every((q,i)=>!i||tasks[i-1].level<=q.level));
  const html=a.api.overview();assert(html.includes('data-check="first-town"'));assert(html.includes('data-check="flight-paths"'));assert.match(html,/data-check="first-town"[^>]*checked/);
@@ -257,4 +257,27 @@ test('native builds open ready to edit without either removed toolbar button',()
 });
 test('grouped navigation preserves every page and Overview includes both personal planning sections',()=>{
  const a=app(),c=a.api.character();Object.assign(c,C.createCharacter({classId:'mage',level:20}),{blank:false});a.api.renderShell();const nav=a.element('#navigation').innerHTML;for(const id of ['overview','talents','abilities','gear','professions','notes','quests','dungeons','zones','world-map','zone-guide','glossary','controller'])assert(nav.includes('data-page="'+id+'"'));assert(nav.includes('Character'));assert(nav.includes('Adventure'));assert(nav.includes('Help'));assert(!nav.includes('nav-separator'));const html=a.api.overview();assert(html.includes('My goals'));assert(html.includes('Plan my next town visit'));assert(html.includes('activity-filter'));
+});
+
+test('new starter guidance renders with bag badges and profession-specific book advice in both languages',()=>{
+ const a=app(),c=a.api.character();Object.assign(c,C.createCharacter({race:'Human',faction:'Alliance',classId:'warrior',level:7,professions:['Mining','Blacksmithing']}));c.blank=false;c.filters.view='all';
+ for(const lang of ['en','sv']){
+  a.api.state.settings.language=lang;a.api.renderShell();require('../i18n.js').setLanguage(lang);
+  const html=a.api.questCard(require('../i18n.js').localize(require('../discoveries.js').quests.find(q=>q.id==='paxton-rodents')));
+  assert(html.includes(lang==='en'?'selected professions: Mining for Dummies':'dina valda professions: Mining for Dummies'));
+  assert(html.includes(lang==='en'?'Beta data':'Betadata'));
+  const bag=a.api.questCard(require('../i18n.js').localize(require('../discoveries.js').quests.find(q=>q.id==='paxton-return')));
+  assert(bag.includes(lang==='en'?'Bag · 6 slots':'Väska · 6 platser'));
+  assert(!html.includes('[object Object]'));assert(!bag.includes('[object Object]'));
+ }
+});
+test('new beginner setup and beta controller notice work with no character in both languages',()=>{
+ const a=app();
+ for(const lang of ['en','sv']){
+  a.api.state.settings.language=lang;a.api.renderShell();require('../i18n.js').setLanguage(lang);a.api.go('glossary');
+  const html=a.element('#content').innerHTML;
+  assert(html.includes('Experience Preset'));assert(html.includes('One-Bag'));assert(html.includes('Ruleset'));
+  assert(!html.includes('[object Object]'));a.api.go('controller');
+  assert(a.element('#content').innerHTML.includes(lang==='en'?'officially in beta':'officiellt i beta'));
+ }
 });

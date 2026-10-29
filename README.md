@@ -6,6 +6,14 @@ Questbound was created with the help of AI.
 
 New installations use Dark / OLED by default, without changing existing saved theme preferences. The map supports direct clicks on visible neighboring zones, with automated coverage for all documented same-continent walk connections.
 
+## Latest researched additions
+
+Starter-area gathering books and free six-slot bags are included for every race. Recommendations follow the character’s starting race or currently selected zone; visiting another starting area does not change quest eligibility. An investigation already started remains suggested after travel.
+
+Brother Paxton’s full chain, faction-specific Shaman weapon quests and Dalaran key/secret-boss preparation use normal prerequisite, complete and skip tracking. Later rewards are previewed without unlocking later quests early. Beta-derived activities are labelled, and recommended levels stay separate from documented minimums.
+
+The Beginner Guide explains Classic/Enhanced presets and matching Ruleset/faction choices for friends. It and the Controller Support page remain available without a character.
+
 ## Characters and progress
 
 Start with an empty profile and create your own characters. You can open the World Map, Beginner Guide, and Controller Support without creating a character; these are available in the sidebar and on the welcome screen. Each profile keeps its level, completed quests, notes, builds, professions, profession skills, current zone, and assistance preferences. Race choices match the selected class and faction. Roles appear only when a class supports more than one. Choose up to two primary professions and all three secondary professions.
