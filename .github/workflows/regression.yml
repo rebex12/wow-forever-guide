@@ -2,7 +2,7 @@ name: Questbound regression tests
 
 on:
   push:
-    branches: [main, 'qa/**']
+    branches: [main, 'qa/**', 'feature/**']
   pull_request:
     branches: [main]
   workflow_dispatch:
