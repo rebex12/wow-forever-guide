@@ -329,7 +329,9 @@
   }
   function heading() {
  const c=character(),n=nav.find(n=>n[0]===page)||nav[0];
- $('#page-heading').innerHTML=`<div class="heading-row"><button class="icon-button mobile-menu" data-action="menu" aria-label="${bi('Open menu','Öppna menyn')}">${utilityIcon('menu')}</button><button class="icon-button" id="back-button" data-action="back" aria-label="${bi('Back','Tillbaka')}" ${navTrail.length?'':'disabled'}>${utilityIcon('back')}</button><h1>${c.blank&&!characterOptionalPages.has(page)?bi('Create your character','Skapa din karaktär'):esc(L.t(n[1]))}</h1><button class="draft-badge" data-action="about">0.7.12</button></div>`;
+ // Overview keeps the large level selector; other pages share a compact one.
+ const quickLevel=!c.blank&&page!=='overview'?`<div class="heading-level" role="group" aria-label="${bi('Character level','Karaktärens level')}"><span>${bi('Level','Level')}</span><button type="button" class="level-button" data-action="level-down" aria-label="${bi('Decrease level','Minska level')}" ${c.level<=1?'disabled':''}>${icon('minus')}</button><input id="quick-character-level" type="number" min="1" max="60" step="1" inputmode="numeric" value="${c.level}" aria-label="${bi('Your current level','Din nuvarande level')}"><button type="button" class="level-button" data-action="level-up" aria-label="${bi('Increase level','Öka level')}" ${c.level>=60?'disabled':''}>${icon('plus')}</button></div>`:'';
+ $('#page-heading').innerHTML=`<div class="heading-row"><button class="icon-button mobile-menu" data-action="menu" aria-label="${bi('Open menu','Öppna menyn')}">${utilityIcon('menu')}</button><button class="icon-button" id="back-button" data-action="back" aria-label="${bi('Back','Tillbaka')}" ${navTrail.length?'':'disabled'}>${utilityIcon('back')}</button><h1>${c.blank&&!characterOptionalPages.has(page)?bi('Create your character','Skapa din karaktär'):esc(L.t(n[1]))}</h1><div class="heading-actions">${quickLevel}<button class="draft-badge" data-action="about">0.7.13</button></div></div>`;
 }
   function renderShell() {
     applyPreferences();
@@ -552,8 +554,17 @@
   }
   function changeLevel(value) {
     const c = character();
-    c.level = C.clamp(value, 1, 60);
-    save();
+    const requested = String(value ?? '').trim();
+    // Invalid or empty input must not silently reset the character level.
+    if (c.blank || requested === '' || !Number.isFinite(Number(requested))) {
+      renderShell();
+      return;
+    }
+    const level = C.clamp(Math.trunc(Number(requested)), 1, 60);
+    if (level !== c.level) {
+      c.level = level;
+      save();
+    }
     renderShell();
   }
   document.addEventListener('click', async e => {
@@ -1037,7 +1048,7 @@ function professionGear(){
       renderContent();
       return;
     }
-    if (el.id === 'character-level') {
+    if (el.id === 'character-level' || el.id === 'quick-character-level') {
       changeLevel(el.value);
       return;
     }
