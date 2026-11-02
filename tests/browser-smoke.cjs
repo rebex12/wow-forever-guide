@@ -28,7 +28,7 @@ let browser,origin;
 test.before(async()=>{
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   origin='http://127.0.0.1:'+server.address().port+prefix;
-  browser=await chromium.launch({headless:true});
+  browser=await chromium.launch({headless:true,channel:'chrome'});
 });
 test.after(async()=>{await browser?.close();await new Promise(resolve=>server.close(resolve));});
 async function open(viewport={width:1400,height:900}){
