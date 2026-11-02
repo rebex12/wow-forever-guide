@@ -281,3 +281,27 @@ test('new beginner setup and beta controller notice work with no character in bo
   assert(a.element('#content').innerHTML.includes(lang==='en'?'officially in beta':'officiellt i beta'));
  }
 });
+
+test('compact level control uses active character throughout the app, with bounds and persistence',()=>{
+ const a=app(),c=a.api.character();
+ a.api.go('quests');assert(!a.element('#page-heading').innerHTML.includes('quick-character-level'),'empty profiles have no level selector');
+ Object.assign(c,C.createCharacter({name:'Level Test',classId:'shaman',level:20}));c.blank=false;
+ for(const page of ['talents','quests','dungeons','zones','zone-guide','abilities','gear','professions','notes','world-map','glossary','controller']){
+   a.api.go(page);
+   const heading=a.element('#page-heading').innerHTML;
+   assert.match(heading,/id="quick-character-level"/,page);
+   assert.match(heading,/value="20"/,page);
+ }
+ a.events.change({target:{id:'quick-character-level',value:'45',dataset:{}}});
+ assert.equal(c.level,45);
+ assert.equal(JSON.parse(a.storage.get(C.KEY)).characters[0].level,45);
+ a.api.go('overview');
+ assert(!a.element('#page-heading').innerHTML.includes('quick-character-level'));
+ assert.match(a.element('#content').innerHTML,/id="character-level"[^>]*value="45"/);
+ a.api.go('dungeons');assert.match(a.element('#page-heading').innerHTML,/value="45"/);
+ for(const [value,expected] of [['60',60],['99',60],['0',1],['',1],['nope',1],['31',31]]){
+   a.events.change({target:{id:'quick-character-level',value,dataset:{}}});
+   assert.equal(c.level,expected,'value '+value);
+ }
+ assert.match(a.element('#page-heading').innerHTML,/value="31"/);
+});
