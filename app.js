@@ -13,6 +13,7 @@
   window.RELEASE_CONTENT.apply(RAW);
   window.RELEASE07.apply(RAW);
   window.Discoveries.apply(RAW);
+  window.NovemberFindings.apply(RAW);
   window.TravelExtra.apply(window.TRAVEL_DATA);
   Object.assign(T.dungeonZones,window.RELEASE_CONTENT.dungeonZones);
   T.augment(RAW, window.GUIDE_EXTRA_ZONES);
@@ -328,7 +329,7 @@
   }
   function heading() {
  const c=character(),n=nav.find(n=>n[0]===page)||nav[0];
- $('#page-heading').innerHTML=`<div class="heading-row"><button class="icon-button mobile-menu" data-action="menu" aria-label="${bi('Open menu','Öppna menyn')}">${utilityIcon('menu')}</button><button class="icon-button" id="back-button" data-action="back" aria-label="${bi('Back','Tillbaka')}" ${navTrail.length?'':'disabled'}>${utilityIcon('back')}</button><h1>${c.blank&&!characterOptionalPages.has(page)?bi('Create your character','Skapa din karaktär'):esc(L.t(n[1]))}</h1><button class="draft-badge" data-action="about">0.7.10</button></div>`;
+ $('#page-heading').innerHTML=`<div class="heading-row"><button class="icon-button mobile-menu" data-action="menu" aria-label="${bi('Open menu','Öppna menyn')}">${utilityIcon('menu')}</button><button class="icon-button" id="back-button" data-action="back" aria-label="${bi('Back','Tillbaka')}" ${navTrail.length?'':'disabled'}>${utilityIcon('back')}</button><h1>${c.blank&&!characterOptionalPages.has(page)?bi('Create your character','Skapa din karaktär'):esc(L.t(n[1]))}</h1><button class="draft-badge" data-action="about">0.7.11</button></div>`;
 }
   function renderShell() {
     applyPreferences();
@@ -972,6 +973,7 @@ function professionMaterials(name) {
 function professionTraining(name,skill) {
  const c=character();let content='';
  if(name==='Cooking'){
+  content+=`<p>${bi('Bonus Cooking recipe from Changing Tastes (Horde, level 24+): Recipe: Twice-Spiced Raptor Slice. Requires Cooking 75; uses 1 Raptor Flesh + 2 Mild Spices to create 2 portions. Its Well Fed effect gives +3 Intellect and 5% bonus experience from kills (beta data). Optional food, not counted in the fish leveling budget.','Extra Cooking-recept från Changing Tastes (Horde, level 24+): Recipe: Twice-Spiced Raptor Slice. Kräver Cooking 75; 1 Raptor Flesh + 2 Mild Spices ger 2 portioner. Well Fed ger +3 Intellect och 5 % extra XP från kills (betauppgift). Extra mat, räknas inte i fiskrutten.')}</p><p><a href="https://www.wowhead.com/forever/item=250185" target="_blank" rel="noopener noreferrer">Recipe: Twice-Spiced Raptor Slice</a></p>`;
   if(skill<150)content+=`<p>${bi('At 125: Expert Cookbook. Alliance: Shandrina, Ashenvale. Horde: Wulan, Shadowprey Village.','Vid 125: Expert Cookbook. Alliance: Shandrina, Ashenvale. Horde: Wulan, Shadowprey Village.')}</p>`;
   if(skill<=225)content+=`<p>${bi('For Artisan (character level 35, skill 225): Clamlette Surprise in Gadgetzan. Save these separately from the recipe budget:','För Artisan (karaktärslevel 35, skill 225): Clamlette Surprise i Gadgetzan. Spara detta separat från receptbudgeten:')}</p><ul><li>12 × Giant Egg</li><li>10 × Zesty Clam Meat</li><li>20 × Alterac Swiss</li></ul>`;
  }else if(name==='First Aid'){

@@ -2,6 +2,12 @@
 
 This changelog tracks changes published to the GitHub repository. It is not displayed on the website.
 
+## 0.7.11 – 2026-11-02
+- Added nine beta-sourced quests across four scheduled findings: Changing Tastes (Cooking 75 XP-food recipe and choice of trinket), Alliance/Horde Titan Relic chains with gear previews, Dragonmaw Rumors → Open the Maw gating, and A Green Sample / Opportunistic Education in City of Dalaran.
+- Included pickup NPCs, minimum levels, zone associations, faction-specific reward choices, and visible pre-run reminders in both dungeon cards. Marked all additions as beta data and attached Wowhead quest sources. (`november-findings.js`)
+- Documented Twice-Spiced Raptor Slice separately under Cooking without including optional food in leveling material totals. (`app.js`)
+- Added regression tests, updated sources, release labels and offline cache. (`tests/november-findings.test.cjs`, `SOURCES.md`, `index.html`, `sw.js`)
+
 ## 0.7.10 – 2026-10-29
 - Added all seven starter gathering-book quests, profession-aware manual advice, the two-stage Coldridge mail delivery and The Damned prerequisite for Marla’s Last Wish.
 - Added the complete eight-stage Brother Paxton chain, including bag and weapon previews before later stages unlock. Starter recommendations follow race, current zone and chains already started.
