@@ -2,6 +2,13 @@
 
 This changelog tracks changes published to the GitHub repository. It is not displayed on the website.
 
+## 0.7.12 – 2026-11-02
+- Audited the application with **125 Node.js regression tests** covering saved profiles, quest chains, talents, professions, map navigation, travel routes, translations, accessibility-sensitive navigation, and offline caching.
+- Fixed the optional Cooking-recipe source link ignoring the `showSourceLinks` setting. (`app.js`)
+- Updated the full-app test harness to load the November quest layer, restoring full regression coverage. (`tests/features.test.cjs`)
+- Added automated real-Chrome smoke tests of desktop and mobile navigation, creation, save/reload, quests, professions, and public guides. New GitHub Actions workflow runs these and Node tests on each push/PR. (`tests/browser-smoke.cjs`, `.github/workflows/regression.yml`)
+- Updated version labels, the on-site changelog and offline cache version to force updated assets on GitHub Pages. (`november-findings.js`, `app.js`, `index.html`, `sw.js`)
+
 ## 0.7.11 – 2026-11-02
 - Added nine beta-sourced quests across four scheduled findings: Changing Tastes (Cooking 75 XP-food recipe and choice of trinket), Alliance/Horde Titan Relic chains with gear previews, Dragonmaw Rumors → Open the Maw gating, and A Green Sample / Opportunistic Education in City of Dalaran.
 - Included pickup NPCs, minimum levels, zone associations, faction-specific reward choices, and visible pre-run reminders in both dungeon cards. Marked all additions as beta data and attached Wowhead quest sources. (`november-findings.js`)

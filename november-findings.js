@@ -6,7 +6,7 @@
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.NovemberFindings = api;
 })(typeof window !== 'undefined' ? window : globalThis, function () {
-  const version = '0.7.11', updated = '2026-11-02';
+  const version = '0.7.12', findingsVersion = '0.7.11', updated = '2026-11-02';
   const text = (en, sv) => ({en, sv});
   const source = id => 'https://www.wowhead.com/forever/quest=' + id;
   const quest = (id, questId, title, level, faction, dungeonId, zoneIds, location, en, sv, extra = {}) => ({
@@ -92,9 +92,12 @@
       dalaran.note = text((note.en || '') + ' Additional quest: Alliance picks up A Green Sample in Stormwind; Horde picks up Opportunistic Education at the sewer entrance.',
         (note.sv || '') + ' Extra quest: Alliance hämtar A Green Sample i Stormwind; Horde hämtar Opportunistic Education vid kloakingången.');
     }
-    data.changelog.unshift({version, date: updated, text: text(
+    data.changelog.unshift({version: findingsVersion, date: updated, text: text(
       'Added Changing Tastes and its Cooking recipe, both Titan Relic weapon chains, the mandatory Dragonmaw Rumors prerequisite, and faction-specific City of Dalaran reward quests (beta-sourced).',
       'Lagt till Changing Tastes och Cooking-receptet, båda Titan Relic-vapenkedjorna, Dragonmaw Rumors som förkrav samt factionspecifika belöningsquests i City of Dalaran (betakällor).')});
+    data.changelog.unshift({version, date: updated, text: text(
+      'Regression audit: restored full-app test coverage and fixed the Cooking reward source link when source links are disabled. Added automated Chrome smoke tests for desktop and mobile.',
+      'Regressionskontroll: återställd täckning för hela appen och rättad Cooking-belöningslänk när källänkar är avstängda. Automatiska Chrome-tester för desktop och mobil har lagts till.')});
     data.novemberFindingsVersion = version;
     data.version = version;
     data.updated = updated;
