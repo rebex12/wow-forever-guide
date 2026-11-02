@@ -2,6 +2,12 @@
 
 This changelog tracks changes published to the GitHub repository. It is not displayed on the website.
 
+## 0.7.13 – 2026-11-02
+- Added a compact level selector in the shared page header for every configured character page except Overview, which retains its larger level control. Supports +/- buttons, direct numeric input, level limits 1–60, and recovery from empty/invalid input. (`app.js`, `v07.css`)
+- Changes use the active character's existing saved level, immediately refresh all level-dependent recommendations, and persist after reload.
+- Added regression coverage for every page, limits, profile persistence and responsive desktop/mobile rendering in Chromium. (`tests/features.test.cjs`, `tests/browser-smoke.cjs`)
+- Bumped release labels, in-app changelog and offline cache. (`index.html`, `november-findings.js`, `sw.js`)
+
 ## 0.7.12 – 2026-11-02
 - Audited the application with **125 Node.js regression tests** covering saved profiles, quest chains, talents, professions, map navigation, travel routes, translations, accessibility-sensitive navigation, and offline caching.
 - Fixed the optional Cooking-recipe source link ignoring the `showSourceLinks` setting. (`app.js`)
