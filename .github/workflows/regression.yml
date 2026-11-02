@@ -23,3 +23,16 @@ jobs:
           for file in ./*.js; do node --check "$file"; done
       - name: Node regression tests
         run: node --test tests/*.test.cjs
+
+  browser-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser driver
+        run: npm install --no-save --no-package-lock playwright@1.58.2
+      - name: Real Chromium desktop and mobile smoke tests
+        run: node --test tests/browser-smoke.cjs
