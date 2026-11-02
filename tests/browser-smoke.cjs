@@ -104,3 +104,72 @@ test('real mobile: public guides work before character creation using hamburger 
     assert.deepEqual(errors,[],'uncaught mobile runtime errors');
   }finally{await context.close();}
 });
+test('configured character can change level throughout the app with bounds and reload persistence',async()=>{
+ const {context,page,errors}=await open();
+ try{
+   assert.equal(await page.locator('#quick-character-level').count(),0);
+   await go(page,'controller');
+   assert.equal(await page.locator('#quick-character-level').count(),0);
+   await page.locator('.new-character').click();
+   await page.locator('#character-form input[name="name"]').fill('Level Test');
+   await page.locator('#character-form select[name="classId"]').selectOption('shaman');
+   await page.locator('#character-form select[name="faction"]').selectOption('Horde');
+   await page.locator('#character-form select[name="race"]').selectOption('Orc');
+   await page.locator('button[form="character-form"]').click();
+   await page.waitForFunction(()=>!document.querySelector('#dialog').open);
+   for(const id of ['quests','dungeons','zones','zone-guide','talents','abilities','gear','professions','notes','world-map','glossary','controller']){
+     await go(page,id);
+     assert.equal(await page.locator('#quick-character-level').count(),1,id);
+   }
+   await go(page,'quests');
+   const input=page.locator('#quick-character-level');
+   await input.fill('30');
+   await input.press('Tab');
+   assert.equal(await input.inputValue(),'30');
+   await page.locator('.heading-level [data-action="level-up"]').click();
+   assert.equal(await input.inputValue(),'31');
+   await page.locator('.heading-level [data-action="level-down"]').click();
+   assert.equal(await input.inputValue(),'30');
+   await input.fill('60');await input.press('Tab');
+   assert(await page.locator('.heading-level [data-action="level-up"]').isDisabled());
+   await input.fill('0');await input.press('Tab');
+   assert.equal(await input.inputValue(),'1');
+   assert(await page.locator('.heading-level [data-action="level-down"]').isDisabled());
+   await input.fill('');await input.press('Tab');
+   assert.equal(await input.inputValue(),'1','empty input must not change level');
+   await input.fill('43');await input.press('Tab');
+   await go(page,'dungeons');
+   assert.equal(await input.inputValue(),'43');
+   await go(page,'overview');
+   assert.equal(await page.locator('#quick-character-level').count(),0);
+   assert.equal(await page.locator('#character-level').inputValue(),'43');
+   await page.reload({waitUntil:'domcontentloaded'});
+   await go(page,'talents');
+   assert.equal(await input.inputValue(),'43');
+   assert.match(await page.locator('#sidebar-character').innerText(),/Level 43/);
+   assert.deepEqual(errors,[]);
+ } finally {await context.close();}
+});
+test('mobile header keeps level control visible and fully within viewport',async()=>{
+ const {context,page,errors}=await open({width:390,height:844});
+ try{
+   await page.locator('#page-heading [data-action="menu"]').click();
+   await page.locator('.new-character').click();
+   await page.locator('#character-form input[name="name"]').fill('Mobile Tester');
+   await page.locator('#character-form select[name="classId"]').selectOption('shaman');
+   await page.locator('#character-form select[name="faction"]').selectOption('Horde');
+   await page.locator('#character-form select[name="race"]').selectOption('Orc');
+   await page.locator('button[form="character-form"]').click();
+   await page.waitForFunction(()=>!document.querySelector('#dialog').open);
+   await page.locator('#page-heading [data-action="menu"]').click();
+   await page.locator('#navigation [data-page="dungeons"]').click();
+   const box=await page.locator('.heading-level').boundingBox();
+   assert(box&&box.x>=0&&box.x+box.width<=390,'level control must fit mobile screen');
+   await page.locator('#quick-character-level').fill('24');
+   await page.locator('#quick-character-level').press('Tab');
+   assert.equal(await page.locator('#quick-character-level').inputValue(),'24');
+   await page.locator('.heading-level [data-action="level-up"]').click();
+   assert.equal(await page.locator('#quick-character-level').inputValue(),'25');
+   assert.deepEqual(errors,[]);
+ }finally{await context.close();}
+});
