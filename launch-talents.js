@@ -171,6 +171,14 @@
   for(const x of t.talents)x.requires=x.requires.filter(r=>ids.has(r.id));
   t.talents.sort((a,b)=>a.row-b.row||a.col-b.col);
  }
+ // Rank ceilings changed in the November notes; avoid leaving ranks without
+ // readable tooltips when exact numeric rank values have not been confirmed.
+ for(const [cls,v] of Object.entries(catalog.classes))for(const t of v.trees)for(const talent of t.talents){
+  effects[talent.id]||={};
+  for(let rank=1;rank<=talent.max;rank++)if(!effects[talent.id][rank]){
+   effects[talent.id][rank]='Rank '+rank+'/'+talent.max+': exact updated Forever effect pending verification from the launch calculator. Please confirm in-game.';
+  }
+ }
  // Reuse existing bundled class-tree icon artwork for launch-only talents until
  // their official spell/icon IDs are available. Avoid broken image placeholders.
  if(root.GAME_ASSETS?.talents){
