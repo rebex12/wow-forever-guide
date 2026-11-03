@@ -171,6 +171,14 @@
   for(const x of t.talents)x.requires=x.requires.filter(r=>ids.has(r.id));
   t.talents.sort((a,b)=>a.row-b.row||a.col-b.col);
  }
+ // Reuse existing bundled class-tree icon artwork for launch-only talents until
+ // their official spell/icon IDs are available. Avoid broken image placeholders.
+ if(root.GAME_ASSETS?.talents){
+  for(const v of Object.values(catalog.classes))for(const t of v.trees){
+   const fallback=t.talents.map(x=>root.GAME_ASSETS.talents[x.id]).find(Boolean);
+   for(const x of t.talents)if(!root.GAME_ASSETS.talents[x.id]&&fallback)root.GAME_ASSETS.talents[x.id]=fallback;
+  }
+ }
  catalog.updated='2026-11-03';catalog.dataVersion='launch-2026-11-03';catalog.clientBuild='1.60.1.70755';
  catalog.migrateLegacyBuild=function(b){
   const oldTrees=old[b.classId];if(!oldTrees)return b;
