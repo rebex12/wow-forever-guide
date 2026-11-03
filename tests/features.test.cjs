@@ -152,7 +152,7 @@ test('back navigation returns to the previous app page',()=>{
  const a=app();Object.assign(a.api.character(),C.createCharacter({name:'Test'}),{blank:false});a.api.go('talents');a.api.go('notes');a.api.goBack();assert.match(a.element('#page-heading').innerHTML,/Talents/);a.api.goBack();assert.match(a.element('#page-heading').innerHTML,/Overview/);
 });
 test('every talent uses a bundled game icon and each catalogue position stays in its grid',()=>{
- const window={};vm.runInNewContext(file('game-assets.js'),{window});const assets=window.GAME_ASSETS;for(const cl of Object.values(data().FOREVER_CATALOG.classes))for(const t of cl.trees)for(const tal of t.talents){assert(assets.icons[assets.talents[tal.id]],tal.name);assert(tal.row>=0&&tal.col>=0&&tal.col<4);}
+ const window={};for(const f of ['game-assets.js','catalog.js','talent-text.js','launch-talents.js'])vm.runInNewContext(file(f),{window});const assets=window.GAME_ASSETS;for(const cl of Object.values(window.FOREVER_CATALOG.classes))for(const t of cl.trees)for(const tal of t.talents){assert(assets.icons[assets.talents[tal.id]],tal.name);assert(tal.row>=0&&tal.col>=0&&tal.col<4);}
 });
 
 test('source links default off, persist when enabled, and affect cards across categories',()=>{
@@ -184,7 +184,7 @@ test('dungeon coverage reaches 60 and every guide zone has mapped quest content'
  for(const dungeon of d.dungeons){assert(dungeon.level<=dungeon.maxLevel);assert(dungeon.maxLevel<=60);assert(dungeon.level>=13);}
 });
 test('all nine talent classes have local backgrounds and every rank has readable effect text',()=>{
- const window={};vm.runInNewContext(file('talent-text.js'),{window});let count=0;
+ const window=data();let count=0;
  for(const cl of Object.values(data().FOREVER_CATALOG.classes))for(const tree of cl.trees){assert(fs.existsSync(path.join(__dirname,'../assets/talents',tree.id+'.jpg')));for(const t of tree.talents)for(let rank=1;rank<=t.max;rank++){assert(window.TALENT_TEXT[t.id]?.[rank]?.length>5,t.name+' '+rank);count++;}}
  assert(count>1000);const a=app(),c=a.api.character();Object.assign(c,C.createCharacter({level:20}),{blank:false});const b=a.api.builtIn();c.builds=[b];c.activeBuild=b.id;const html=a.api.talents();assert(html.includes('talent-arrows'));assert(html.includes('data-tooltip='));assert(html.includes('assets/talents/'));const info=a.api.talentInfo(1,0);assert(info.includes('talent-effect'));assert(!info.includes('Effect text is not available'));
 });
@@ -278,7 +278,7 @@ test('new beginner setup and beta controller notice work with no character in bo
   const html=a.element('#content').innerHTML;
   assert(html.includes('Experience Preset'));assert(html.includes('One-Bag'));assert(html.includes('Ruleset'));
   assert(!html.includes('[object Object]'));a.api.go('controller');
-  assert(a.element('#content').innerHTML.includes(lang==='en'?'officially in beta':'officiellt i beta'));
+  assert(a.element('#content').innerHTML.includes(lang==='en'?'functionally complete':'funktionsfärdigt'));
  }
 });
 
