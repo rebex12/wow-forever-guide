@@ -18,7 +18,7 @@ test('November findings integrate without duplicate quests and can be applied tw
   F.apply(d);
   assert.equal(JSON.stringify(d), snapshot);
   assert.equal(F.quests.length, 9);
-  assert.equal(d.version, '0.7.13');
+  assert.equal(d.version, '0.8.0');
   assert.equal(new Set(d.quests.map(x=>x.id)).size, d.quests.length);
   const ids = new Set(d.quests.map(x=>x.id));
   for (const q of F.quests) {
