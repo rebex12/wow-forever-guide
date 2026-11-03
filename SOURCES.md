@@ -153,3 +153,9 @@ Reviewed the scheduled discovery reports from 28–29 October against the existi
 - [Dragonmaw Rumors](https://www.wowhead.com/forever/quest=95663) → [Open the Maw](https://www.wowhead.com/forever/quest=95682): Horde prerequisite in Hammerfall and follow-up outside Excavation Site.
 - [A Green Sample](https://www.wowhead.com/forever/quest=92456) (Alliance) and [Opportunistic Education](https://www.wowhead.com/forever/quest=96987) (Horde): City of Dalaran reward choices and pickup locations.
 - [Dungeon quest guide](https://www.wowhead.com/forever/guide/dungeons/every-dungeon-quest-location), updated 2026-10-31; contains beta data that can change before the 2026-11-04 release. Quest requirements and reward tooltips should be rechecked after launch.
+
+## 2026-11-03: launch class and talent update
+- [Blizzard's launch development notes (mirrored by Wowhead)](https://www.wowhead.com/forever/news/wow-forever-official-development-notes-and-class-tuning-383704): class-by-class talents, abilities, racials, controller support and training costs; verified 2026-11-03.
+- [WoW Forever client build 1.60.1.70755 vs 70753](https://metammo.com/wow-forever/patch-notes): datamined 2026-11-03, no tracked talent/item/quest changes after 70753. Third-party build comparison, not an official Blizzard note.
+- [Build 1.60.1.70753 data comparison](https://metammo.com/wow-forever/patch-notes/1.60.1.70753): 65 talent changes, 40 new items and one Enchanting recipe. Supplementary datamining; verify new items in-game.
+- `launch-talents.js` applies individually verified November class/talent adjustments over the October 26 Wowhead v2 snapshot, retaining unchanged data and adding new talents with **provisional internal IDs**. Full calculator parity, ranks and icon IDs remain subject to checking against launch Wowhead/game data. Older built-in Wavebreaker routes cannot obtain 2/2 Improved Ghost Wolf before level 25 without Legacy.
