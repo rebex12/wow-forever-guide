@@ -6,7 +6,7 @@
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.NovemberFindings = api;
 })(typeof window !== 'undefined' ? window : globalThis, function () {
-  const version = '0.7.13', findingsVersion = '0.7.11', updated = '2026-11-02';
+  const version = '0.8.0', findingsVersion = '0.7.11', updated = '2026-11-02';
   const text = (en, sv) => ({en, sv});
   const source = id => 'https://www.wowhead.com/forever/quest=' + id;
   const quest = (id, questId, title, level, faction, dungeonId, zoneIds, location, en, sv, extra = {}) => ({
