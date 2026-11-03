@@ -92,6 +92,9 @@
       dalaran.note = text((note.en || '') + ' Additional quest: Alliance picks up A Green Sample in Stormwind; Horde picks up Opportunistic Education at the sewer entrance.',
         (note.sv || '') + ' Extra quest: Alliance hämtar A Green Sample i Stormwind; Horde hämtar Opportunistic Education vid kloakingången.');
     }
+    data.changelog.unshift({version: '0.8.0', date: '2026-11-03', text: text(
+      'Launch class update: nine revised talent trees, old-build migration, improved Ghost Wolf timing, updated controller notice and regression coverage. New talent icon identifiers and some rank details are provisional.',
+      'Launchuppdatering: nio ändrade talentträd, migrering av gamla builds, uppdaterad Ghost Wolf-ordning, handkontrollsstatus och regressionstester. Nya talentikoner och vissa rankdetaljer är preliminära.')});
     data.changelog.unshift({version: findingsVersion, date: updated, text: text(
       'Added Changing Tastes and its Cooking recipe, both Titan Relic weapon chains, the mandatory Dragonmaw Rumors prerequisite, and faction-specific City of Dalaran reward quests (beta-sourced).',
       'Lagt till Changing Tastes och Cooking-receptet, båda Titan Relic-vapenkedjorna, Dragonmaw Rumors som förkrav samt factionspecifika belöningsquests i City of Dalaran (betakällor).')});
