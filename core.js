@@ -112,6 +112,10 @@
   }
   function normaliseBuild(b, catalog, classId) {
     if (!b || b.classId !== classId) throw Error('Buildens klass matchar inte karaktären.');
+    // Before the launch revision, builds used positional talent indices.
+    // Translate by the previous stable talent IDs exactly once; never silently
+    // reinterpret an older point as another talent after a tree rearrangement.
+    if (b.talentData !== catalog.dataVersion && typeof catalog.migrateLegacyBuild === 'function') b = catalog.migrateLegacyBuild(b);
     const trees = catalog.classes[classId].trees;
     const allocations = trees.map((t, i) => t.talents.map((tal, j) => clamp(b.allocations?.[i]?.[j] ?? 0, 0, tal.max)));
     const order = Array.isArray(b.order) ? b.order.slice(0, 60).map(s => ({
@@ -136,7 +140,8 @@
       startLevel: clamp(b.startLevel ?? 10, 5, 10),
       calculator: b.calculator===true,
       custom: !!b.custom,
-      source: clean(b.source || '', 300)
+      source: clean(b.source || '', 300),
+      talentData: catalog.dataVersion || ''
     };
   }
   function parseWowhead(input, catalog, expectedClass) {
