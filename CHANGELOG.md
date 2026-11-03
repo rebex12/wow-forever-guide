@@ -1,5 +1,13 @@
 # Questbound – Changelog
 
+## 0.8.0 – 2026-11-03
+- Applied the November 3 official launch class pass to talent trees for all nine classes. Added/reworked Paladin, Rogue, Druid and Warrior talents; revised Shaman, Mage, Hunter, Priest and Warlock ranks, rows and relevant effects. Added a per-class launch summary and source link on the Talents page. (`launch-talents.js`, `app.js`)
+- Updated the built-in Wavebreaker plan after Improved Ghost Wolf moved to Enhancement tier four: two points now start at level 25 without Legacy, rather than level 15. Updated official controller support status. (`app.js`)
+- Added one-time migration of saved builds by stable talent IDs when old positional indexes change. Existing points on removed talents cannot be preserved; users should review builds and prerequisites. (`launch-talents.js`, `core.js`)
+- Added focused launch-content and migration regression checks to the existing Node + Chromium regression workflow. Refreshed app version and offline cache to deploy updated assets on GitHub Pages. (`tests/launch.test.cjs`, `index.html`, `sw.js`)
+- Sources and limitations: official Blizzard Nov 3 notes, 1.60.1.70755 build comparison; new talents use provisional internal IDs until confirmed and imports should be rechecked against the current Wowhead calculator. (`SOURCES.md`)
+
+
 This changelog tracks changes published to the GitHub repository. It is not displayed on the website.
 
 ## 0.7.13 – 2026-11-02
