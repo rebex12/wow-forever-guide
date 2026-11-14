@@ -1,0 +1,11 @@
+## Interface: 16001
+## Title: TSM Auctionator Bridge
+## Notes: Supplies TSM prices to addons using Auctionator's price API.
+## Author: rebex12
+## Version: 0.1.0-alpha
+## Dependencies: Auctionator
+## OptionalDeps: TradeSkillMaster
+## SavedVariables: TSMAuctionatorBridgeDB
+
+Bridge.lua
+Main.lua

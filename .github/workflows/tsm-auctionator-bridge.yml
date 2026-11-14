@@ -1,0 +1,36 @@
+name: TSM Auctionator Bridge - test and package
+
+on:
+  push:
+    branches: ['addon/tsm-auctionator-bridge']
+    paths:
+      - 'addons/tsm-auctionator-bridge/**'
+      - '.github/workflows/tsm-auctionator-bridge.yml'
+  pull_request:
+    paths:
+      - 'addons/tsm-auctionator-bridge/**'
+      - '.github/workflows/tsm-auctionator-bridge.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: addons/tsm-auctionator-bridge
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Lua 5.1
+        run: sudo apt-get update && sudo apt-get install -y lua5.1
+      - name: Test bridge and WoW entry point
+        run: lua5.1 tests/run.lua
+      - name: Package addon
+        run: python3 scripts/package.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TSMAuctionatorBridge
+          path: addons/tsm-auctionator-bridge/dist/*.zip
+          if-no-files-found: error
