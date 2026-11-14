@@ -1,6 +1,9 @@
 local ADDON, ns = ...
 local bridge
-local VERSION = "0.1.0-alpha"
+ns.VERSION = "0.2.0-alpha"
+ns.Controller = {}
+local Controller = ns.Controller
+local revision = 0
 local frame = CreateFrame("Frame")
 
 local function say(message)
@@ -46,8 +49,97 @@ local function money(value)
         return "unavailable"
     end
     value = math.floor(value)
+    if type(GetCoinTextureString) == "function" then
+        return GetCoinTextureString(value)
+    end
     return string.format("%dg %ds %dc", math.floor(value / 10000),
         math.floor(value / 100) % 100, value % 100)
+end
+
+function Controller:FormatPrice(value)
+    return money(value)
+end
+
+function Controller:GetState()
+    install()
+    local tsm = TSM_API
+    return {
+        enabled = bridge.settings.enabled,
+        fallback = bridge.settings.fallback,
+        source = bridge.settings.source,
+        sourceName = ns.SOURCES[bridge.settings.source],
+        connectedID = bridge:IsActive("GetAuctionPriceByItemID"),
+        connectedLink = bridge:IsActive("GetAuctionPriceByItemLink"),
+        tsmAvailable = type(tsm) == "table" and type(tsm.GetCustomPriceValue) == "function",
+        stats = bridge.stats,
+        lastError = bridge.lastError,
+        revision = revision,
+        version = ns.VERSION,
+    }
+end
+
+function Controller:SetOption(key, value)
+    install()
+    if (key == "source" and not ns.SOURCES[value])
+        or ((key == "enabled" or key == "fallback") and type(value) ~= "boolean")
+        or (key ~= "source" and key ~= "enabled" and key ~= "fallback") then
+        return false
+    end
+    if bridge.settings[key] ~= value then
+        bridge.settings[key] = value
+        revision = revision + 1
+    end
+    return true
+end
+
+-- Shared by the window and the text diagnostic command. No item is probed by
+-- the window's periodic status refresh; lookups happen only on Compare.
+function Controller:Compare(input)
+    install()
+    input = type(input) == "string" and input:match("^%s*(.-)%s*$") or ""
+    local kind, item
+    local id = tonumber(input) or tonumber(input:match("^i:(%d+)$"))
+    if id and id > 0 and id < math.huge and id == math.floor(id) then
+        kind, item = "ID", id
+    elseif input:match("item:%d+") then
+        kind, item = "Link", input
+    else
+        return { ok = false, message = "Enter an item ID or paste an item link." }
+    end
+
+    local tsmPrice = bridge:GetTSMPrice(kind, item)
+    local originalOK, originalPrice = pcall(bridge.OriginalPrice, bridge, kind, item)
+    local method = "GetAuctionPriceByItem" .. kind
+    local api = getAuctionatorAPI()
+    local fn = api and api[method]
+    local resultOK, deliveredPrice
+    if type(fn) == "function" then
+        resultOK, deliveredPrice = pcall(fn, "TSMAuctionatorBridge", item)
+    end
+    local result = {
+        ok = true,
+        tsmPrice = tsmPrice,
+        auctionatorPrice = originalOK and originalPrice or nil,
+        deliveredPrice = resultOK and deliveredPrice or nil,
+        originalOK = originalOK,
+        deliveredOK = resultOK,
+        sourceName = ns.SOURCES[bridge.settings.source],
+        input = input,
+    }
+    if not resultOK then
+        result.message, result.tone = "Auctionator's price function is unavailable or returned an error.", "error"
+    elseif not bridge:IsActive(method) then
+        result.message, result.tone = "The price function was replaced by another addon. Its returned price is shown above.", "warning"
+    elseif not bridge.settings.enabled then
+        result.message, result.tone = "Bridge is off. Addons receive Auctionator's original price.", "warning"
+    elseif tsmPrice then
+        result.message, result.tone = "Addons receive TSM " .. result.sourceName .. ".", "success"
+    elseif bridge.settings.fallback and originalOK and originalPrice then
+        result.message, result.tone = "No TSM price. Addons receive Auctionator's original price.", "warning"
+    else
+        result.message, result.tone = "No price available with the current settings.", "warning"
+    end
+    return result
 end
 
 local function settingChanged()
@@ -56,7 +148,7 @@ end
 
 local function showStatus()
     local settings = bridge.settings
-    say("v" .. VERSION .. "; " .. (settings.enabled and "enabled" or "disabled")
+    say("v" .. ns.VERSION .. "; " .. (settings.enabled and "enabled" or "disabled")
         .. "; source: " .. ns.SOURCES[settings.source]
         .. "; Auctionator fallback: " .. (settings.fallback and "on" or "off"))
     say("API by ID: " .. (bridge:IsActive("GetAuctionPriceByItemID") and "connected" or "not connected")
@@ -71,38 +163,27 @@ local function showStatus()
 end
 
 local function testItem(input)
-    local kind, item
-    local id = tonumber(input) or tonumber(input:match("^i:(%d+)$"))
-    if id and id > 0 and id < math.huge and id == math.floor(id) then
-        kind, item = "ID", id
-    elseif input:find("item:", 1, true) then
-        kind, item = "Link", input
-    else
+    local result = Controller:Compare(input)
+    if not result.ok then
         say("Usage: /tsmbridge test <itemID or shift-clicked item link>")
         return
     end
-    local tsmPrice = bridge:GetTSMPrice(kind, item)
-    local originalOK, originalPrice = pcall(bridge.OriginalPrice, bridge, kind, item)
-    local api = getAuctionatorAPI()
-    local fn = api and api["GetAuctionPriceByItem" .. kind]
-    local resultOK, result
-    if type(fn) == "function" then
-        resultOK, result = pcall(fn, "TSMAuctionatorBridge", item)
-    end
-    say("TSM " .. ns.SOURCES[bridge.settings.source] .. ": " .. money(tsmPrice)
-        .. "; original Auctionator: " .. (originalOK and money(originalPrice) or "API error"))
-    say("Price returned through Auctionator API: " .. (resultOK and money(result) or "API unavailable/error"))
+    say("TSM " .. result.sourceName .. ": " .. money(result.tsmPrice)
+        .. "; original Auctionator: " .. (result.originalOK and money(result.auctionatorPrice) or "API error"))
+    say("Price returned through Auctionator API: " .. (result.deliveredOK and money(result.deliveredPrice) or "API unavailable/error"))
 end
 
 local function command(message)
     install()
     message = (message or ""):match("^%s*(.-)%s*$")
     local action, rest = message:match("^(%S+)%s*(.-)$")
-    action = action and action:lower() or "status"
-    if action == "status" then
+    action = action and action:lower() or "ui"
+    if action == "ui" or action == "config" then
+        ns.UI.Toggle(Controller)
+    elseif action == "status" then
         showStatus()
     elseif action == "on" or action == "off" then
-        bridge.settings.enabled = action == "on"
+        Controller:SetOption("enabled", action == "on")
         settingChanged()
     elseif action == "source" then
         local source = rest:lower()
@@ -110,7 +191,7 @@ local function command(message)
             say("Sources: dbminbuyout, dbmarket, dbrecent. Example: /tsmbridge source dbmarket")
             return
         end
-        bridge.settings.source = source
+        Controller:SetOption("source", source)
         settingChanged()
     elseif action == "fallback" then
         rest = rest:lower()
@@ -118,12 +199,12 @@ local function command(message)
             say("Usage: /tsmbridge fallback on|off")
             return
         end
-        bridge.settings.fallback = rest == "on"
+        Controller:SetOption("fallback", rest == "on")
         settingChanged()
     elseif action == "test" then
         testItem(rest)
     else
-        say("/tsmbridge status | on | off | source dbminbuyout|dbmarket|dbrecent | fallback on|off | test <itemID/link>")
+        say("/tsmbridge opens the window. Text commands: status | on | off | source dbminbuyout|dbmarket|dbrecent | fallback on|off | test <itemID/link>")
     end
 end
 

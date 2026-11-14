@@ -1,6 +1,6 @@
 # TSM Auctionator Bridge
 
-Första utkastet, **0.1.0-alpha**, för **WoW: Forever**. Ett separat addon som
+Version **0.2.0-alpha**, för **WoW: Forever**. Ett separat addon som
 låter andra addons få priser från TradeSkillMaster när de frågar Auctionators
 pris-API.
 
@@ -11,7 +11,7 @@ pris-API.
 
 1. Installera Forever-versionerna av **Auctionator** och **TradeSkillMaster**.
    TSM måste redan kunna visa prisdata för föremålet på din marknad.
-2. Hämta [det installerbara ZIP-paketet](downloads/TSMAuctionatorBridge-0.1.0-alpha.zip?raw=true)
+2. Hämta [det installerbara ZIP-paketet](downloads/TSMAuctionatorBridge-0.2.0-alpha.zip?raw=true)
    och packa upp det.
 3. Kopiera mappen `TSMAuctionatorBridge` till
    `World of Warcraft/_forever_/Interface/AddOns/`.
@@ -37,11 +37,35 @@ GitHub Actions sparar det som en nedladdningsbar artifact under
 - Priserna anges i koppar **per föremål**. Mottagande addon hanterar antal.
 - Inställningarna sparas för kontot mellan sessioner.
 
-## Kommandon
+## Grafiskt fönster
+
+Skriv **`/tsmbridge`** för att öppna eller stänga fönstret. Det går att flytta
+genom att dra i rubriken. Stäng med kryssknappen eller Escape.
+
+- **Use TSM prices for other addons:** aktivera eller stäng av bryggan.
+- **Price source:** välj DBMinBuyout, DBMarket eller DBRecent med knapparna.
+- **Use Auctionator when TSM has no price:** aktivera eller stäng av reservpriset.
+- **Compare an item:** skriv ett item-ID, eller klistra in en itemlänk. Med
+  fokus i fältet kan också shift-klickade länkar fångas från WoWs länkfunktion.
+  Tryck **Compare** eller Enter.
+- Tre prisrutor visar **TSM**, **Auctionator** och **Delivered to addons**.
+  Resultattexten förklarar vilket pris som används. Byte av föremål eller
+  inställning rensar den föregående jämförelsen.
+- Statusraden visar anslutningar, och räknarna visar anrop och fel under
+  sessionen. `TSM API: ready` betyder att API:et finns; använd Compare för att
+  se om det finns prisdata för ett visst föremål.
+
+Inställningarna sparas direkt. Den periodiska statusuppdateringen gör inga
+prisförfrågningar. Fönstret byggs först när det öppnas, med WoWs egna
+UI-kontroller och utan extra GUI-bibliotek.
+
+## Kommandon för felsökning
 
 | Kommando | Funktion |
 | --- | --- |
-| `/tsmbridge` | Visar status, anslutna prisfunktioner och statistik för sessionen. |
+| `/tsmbridge` | Öppnar eller stänger det grafiska fönstret. |
+| `/tsmbridge ui` | Samma funktion som `/tsmbridge`. |
+| `/tsmbridge status` | Skriver status och statistik i chatten. |
 | `/tsmbridge test 2447` | Visar TSM-pris, ursprungligt Auctionator-pris och det pris API:et returnerar. |
 | `/tsmbridge test <itemlänk>` | Samma kontroll för en inklistrad/shift-klickad itemlänk. |
 | `/tsmbridge source dbminbuyout` | Använder lägsta utköpspris i TSM:s senaste data. Standard. |
@@ -130,10 +154,11 @@ lua5.1 tests/run.lua
 python3 scripts/package.py
 ```
 
-Testerna omfattar prisval, reservpris, saknad och sen TSM-data, felhantering,
+De 38 testerna omfattar prisval, reservpris, saknad och sen TSM-data, felhantering,
 suffixbevarande, direkt och indirekt rundgång, metadata, sparade inställningar,
-addons laddningshändelser och slashkommandon. De verifierar logiken med testdubblar;
-de ersätter inte kontroll i WoW-klienten.
+addons laddningshändelser, slashkommandon och det grafiska fönstrets
+knapptryckningar, prisjämförelse, länkfält och stängning. De verifierar logiken
+med testdubblar; de ersätter inte kontroll i WoW-klienten.
 
 TOC-filen riktar sig till Forever interface **16001**. API-anropen har stämts av
 mot publikt tillgänglig Auctionator API v1-kod och TSM:s publika addon-API.

@@ -257,10 +257,8 @@ test("queries do not cache stale TSM prices", function()
 end)
 
 -- Exercise the actual WoW entry point and slash commands, not only the core.
-local messages, mockFrame = {}, {}
-function mockFrame:RegisterEvent() end
-function mockFrame:SetScript(_, callback) self.callback = callback end
-CreateFrame = function() return mockFrame end
+local messages = {}
+local wow = assert(loadfile("tests/wow_mock.lua"))()
 DEFAULT_CHAT_FRAME = { AddMessage = function(_, message) messages[#messages + 1] = message end }
 SlashCmdList = {}
 Auctionator = { API = { v1 = {
@@ -274,17 +272,19 @@ TSM_API = {
     ToItemString = function() return "i:2447" end,
 }
 TSMAuctionatorBridgeDB = { source = "AtrValue", enabled = "yes", fallback = 123 }
+assert(loadfile("TSMAuctionatorBridge/UI.lua"))("TSMAuctionatorBridge", ns)
 assert(loadfile("TSMAuctionatorBridge/Main.lua"))("TSMAuctionatorBridge", ns)
+local mockFrame = wow.widgets[#wow.widgets]
 
 test("addon load normalizes saved settings and installs before login", function()
-    mockFrame.callback(mockFrame, "ADDON_LOADED", "Auctionator")
+    mockFrame:RunScript("OnEvent", "ADDON_LOADED", "Auctionator")
     equal(Auctionator.API.v1.GetAuctionPriceByItemID("Consumer", 2447), 111)
-    mockFrame.callback(mockFrame, "ADDON_LOADED", "TSMAuctionatorBridge")
+    mockFrame:RunScript("OnEvent", "ADDON_LOADED", "TSMAuctionatorBridge")
     equal(TSMAuctionatorBridgeDB.source, "dbminbuyout")
     equal(TSMAuctionatorBridgeDB.enabled, true)
     equal(TSMAuctionatorBridgeDB.fallback, true)
     equal(Auctionator.API.v1.GetAuctionPriceByItemID("Consumer", 2447), 222)
-    mockFrame.callback(mockFrame, "PLAYER_LOGIN")
+    mockFrame:RunScript("OnEvent", "PLAYER_LOGIN")
     equal(Auctionator.API.v1.GetAuctionPriceByItemID("Consumer", 2447), 222)
 end)
 
@@ -322,6 +322,160 @@ test("status, diagnostics, help and malformed input do not throw", function()
         end
     end
     assert(found, "diagnostic did not report the returned price")
+end)
+
+test("default slash command opens a reusable window without querying prices", function()
+    if ns.UI.window then ns.UI.window:Hide() end
+    local calls = 0
+    TSM_API.GetCustomPriceValue = function() calls = calls + 1; return 333 end
+    local chatBefore = #messages
+    SlashCmdList.TSMAUCTIONATORBRIDGE("")
+    local window = ns.UI.window
+    assert(window:IsShown())
+    equal(calls, 0)
+    equal(#messages, chatBefore)
+    local widgetCount = #wow.widgets
+    SlashCmdList.TSMAUCTIONATORBRIDGE("")
+    equal(window:IsShown(), false)
+    SlashCmdList.TSMAUCTIONATORBRIDGE("ui")
+    equal(ns.UI.window, window)
+    equal(#wow.widgets, widgetCount)
+    equal(#UISpecialFrames, 1)
+    equal(#wow.hooks, 1)
+    TSM_API.GetCustomPriceValue = function(source)
+        return source == "DBMinBuyout" and 222 or 333
+    end
+end)
+
+test("UI source buttons save settings and change delivered prices", function()
+    local window = ns.UI.window
+    window.sources[1]:Click()
+    equal(TSMAuctionatorBridgeDB.source, "dbminbuyout")
+    equal(Auctionator.API.v1.GetAuctionPriceByItemID("Consumer", 2447), 222)
+    assert(window.sources[1].selected)
+    equal(window.sources[2].selected, false)
+    window.sources[2]:Click()
+    equal(TSMAuctionatorBridgeDB.source, "dbmarket")
+    equal(Auctionator.API.v1.GetAuctionPriceByItemID("Consumer", 2447), 333)
+end)
+
+test("UI enabled checkbox bypasses and restores the real bridge", function()
+    local window = ns.UI.window
+    window.enabled:Click()
+    equal(TSMAuctionatorBridgeDB.enabled, false)
+    equal(Auctionator.API.v1.GetAuctionPriceByItemID("Consumer", 2447), 111)
+    window.enabled:Click()
+    equal(TSMAuctionatorBridgeDB.enabled, true)
+    equal(Auctionator.API.v1.GetAuctionPriceByItemID("Consumer", 2447), 333)
+end)
+
+test("UI comparison shows all three prices without chat messages", function()
+    local window = ns.UI.window
+    local chatBefore = #messages
+    window.input:SetText("2447")
+    window.compareButton:Click()
+    equal(window.prices[1].value:GetText(), "0g 3s 33c")
+    equal(window.prices[2].value:GetText(), "0g 1s 11c")
+    equal(window.prices[3].value:GetText(), "0g 3s 33c")
+    equal(window.lastComparison.tone, "success")
+    equal(#messages, chatBefore)
+end)
+
+test("changing a setting or item clears stale comparisons", function()
+    local window = ns.UI.window
+    window.sources[3]:Click()
+    equal(window.lastComparison, nil)
+    equal(window.prices[3].value:GetText(), "--")
+    window.compareButton:Click()
+    assert(window.lastComparison.ok)
+    window.input:SetText("2449")
+    equal(window.lastComparison, nil)
+    equal(window.prices[3].value:GetText(), "--")
+end)
+
+test("Enter compares an item and malformed input reports an inline error", function()
+    local window = ns.UI.window
+    window.input:SetText("i:2447")
+    window.input:RunScript("OnEnterPressed")
+    assert(window.lastComparison.ok)
+    window.input:SetText("potato")
+    window.compareButton:Click()
+    equal(window.lastComparison.ok, false)
+    equal(window.prices[1].value:GetText(), "--")
+    equal(window.resultMessage:GetText(), "Enter an item ID or paste an item link.")
+end)
+
+test("UI fallback control handles missing TSM data and unavailable TSM API", function()
+    local window = ns.UI.window
+    local tsm = TSM_API
+    TSM_API = nil
+    window.input:SetText("2447")
+    window.compareButton:Click()
+    equal(window.prices[1].value:GetText(), "unavailable")
+    equal(window.prices[3].value:GetText(), "0g 1s 11c")
+    window.fallback:Click()
+    equal(TSMAuctionatorBridgeDB.fallback, false)
+    window.compareButton:Click()
+    equal(window.prices[3].value:GetText(), "unavailable")
+    window.fallback:Click()
+    equal(TSMAuctionatorBridgeDB.fallback, true)
+    TSM_API = tsm
+end)
+
+test("status refresh does not issue TSM price lookups", function()
+    local calls = 0
+    local original = TSM_API.GetCustomPriceValue
+    TSM_API.GetCustomPriceValue = function() calls = calls + 1; return 333 end
+    local window = ns.UI.window
+    for _ = 1, 5 do window:RunScript("OnUpdate", 1) end
+    equal(calls, 0)
+    assert(window.stats:GetText():find("THIS SESSION", 1, true))
+    TSM_API.GetCustomPriceValue = original
+end)
+
+test("shift-click links only populate the focused visible comparison field", function()
+    local window = ns.UI.window
+    local link = "|Hitem:2447:0|h[Peacebloom]|h"
+    window.input:SetText("2447")
+    window.input:ClearFocus()
+    equal(ChatEdit_InsertLink(link), false)
+    equal(window.input:GetText(), "2447")
+    window.input:SetFocus()
+    equal(ChatEdit_InsertLink(link), false)
+    equal(window.input:GetText(), link)
+    window.compareButton:Click()
+    assert(window.lastComparison.ok)
+    window:Hide()
+    ChatEdit_InsertLink("item:2449")
+    equal(window.input:GetText(), link)
+    window:Show()
+end)
+
+test("window close and Escape release focus; small screens scale the window", function()
+    local window = ns.UI.window
+    window.input:SetFocus()
+    window.input:RunScript("OnEscapePressed")
+    equal(window:IsShown(), false)
+    equal(window.input:HasFocus(), false)
+    UIParent:SetSize(800, 600)
+    window:Show()
+    assert(window.scale < 1 and window.scale > 0)
+    window.close:Click()
+    equal(window:IsShown(), false)
+    UIParent:SetSize(1280, 900)
+    window:Show()
+    equal(window.scale, 1)
+end)
+
+test("external slash setting changes are reflected in the open window", function()
+    local window = ns.UI.window
+    window.input:SetText("2447")
+    window.compareButton:Click()
+    SlashCmdList.TSMAUCTIONATORBRIDGE("source dbminbuyout")
+    window:RunScript("OnUpdate", 1)
+    assert(window.sources[1].selected)
+    equal(window.lastComparison, nil)
+    equal(window.prices[3].value:GetText(), "--")
 end)
 
 print(string.format("\n%d passed; %d failed.", passed, failed))
